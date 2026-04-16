@@ -1,0 +1,15 @@
+[project]
+name = "d2c-commerce-prototype-api"
+version = "0.1.0"
+description = "Backend API for D2C Commerce Prototype"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+]
+
+[tool.ruff]
+line-length = 88
+
+[tool.black]
+line-length = 88

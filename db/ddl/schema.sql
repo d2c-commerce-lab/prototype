@@ -1,0 +1,16 @@
+-- D2C Commerce Prototype Schema
+-- Initial draft based on ERD
+
+-- tables to be defined:
+-- users
+-- sessions
+-- categories
+-- products
+-- carts
+-- cart_items
+-- campaigns
+-- coupons
+-- orders
+-- order_items
+-- payments
+-- reviews

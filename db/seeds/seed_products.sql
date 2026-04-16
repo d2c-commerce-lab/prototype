@@ -1,0 +1,2 @@
+-- sample product seed
+-- actual insert statements will be added after schema finalization
