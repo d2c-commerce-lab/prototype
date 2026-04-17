@@ -1,5 +1,16 @@
-INSERT INTO categories (category_id, category_name, category_depth, category_status, created_at, updated_at)
-VALUES
-  (gen_random_uuid(), 'Desk Setup', 1, 'active', NOW(), NOW()),
-  (gen_random_uuid(), 'Productivity Tools', 1, 'active', NOW(), NOW()),
-  (gen_random_uuid(), 'Office Accessories', 1, 'active', NOW(), NOW());
+INSERT INTO categories (
+    category_id,
+    parent_category_id,
+    category_name,
+    category_depth,
+    category_status,
+    created_at,
+    updated_at
+) VALUES
+('11111111-1111-1111-1111-111111111001', NULL, 'Desk Setup', 1, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('11111111-1111-1111-1111-111111111002', NULL, 'Productivity Tools', 1, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('11111111-1111-1111-1111-111111111003', NULL, 'Office Accessories', 1, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('11111111-1111-1111-1111-111111111004', NULL, 'Cable Management', 1, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('11111111-1111-1111-1111-111111111005', NULL, 'Stationery', 1, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('11111111-1111-1111-1111-111111111006', NULL, 'Focus & Wellness', 1, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (category_id) DO NOTHING;
