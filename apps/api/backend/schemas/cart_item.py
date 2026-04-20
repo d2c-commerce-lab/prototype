@@ -11,7 +11,7 @@ class CartItemCreateRequest(BaseModel):
 
 
 class CartItemResponse(BaseModel):
-    cart_item_id:UUID
+    cart_item_id: UUID
     cart_id: UUID
     product_id: UUID
     quantity: int
@@ -19,3 +19,9 @@ class CartItemResponse(BaseModel):
     currency: str
     added_at: datetime
     updated_at: datetime
+
+
+class CartItemDeleteResponse(BaseModel):
+    cart_item_id: UUID
+    cart_id: UUID
+    message: str

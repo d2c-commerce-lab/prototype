@@ -184,3 +184,55 @@ def add_item_to_cart(cart_id: UUID, payload: CartItemCreateRequest) -> dict[str,
             "added_at": created_item["added_at"],
             "updated_at": created_item["updated_at"],
         }
+
+
+def remove_item_from_cart(cart_id: UUID, cart_item_id: UUID) -> dict[str, Any]:
+    cart_query = text("""
+        SELECT
+            cart_id
+        FROM carts
+        WHERE cart_id = :cart_id
+          AND cart_status = 'active'
+        LIMIT 1
+    """)
+
+    delete_query = text("""
+        DELETE FROM cart_items
+        WHERE cart_item_id = :cart_item_id
+          AND cart_id = :cart_id
+        RETURNING
+            cart_item_id,
+            cart_id
+    """)
+
+    with engine.begin() as connection:
+        cart = connection.execute(
+            cart_query,
+            {"cart_id": cart_id},
+        ).mappings().first()
+
+        if cart is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Active cart not found",
+            )
+
+        deleted_item = connection.execute(
+            delete_query,
+            {
+                "cart_id": cart_id,
+                "cart_item_id": cart_item_id,
+            },
+        ).mappings().first()
+
+        if deleted_item is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cart item not found",
+            )
+
+        return {
+            "cart_item_id": deleted_item["cart_item_id"],
+            "cart_id": deleted_item["cart_id"],
+            "message": "Cart item removed successfully",
+        }

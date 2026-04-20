@@ -23,6 +23,14 @@ def _create_cart(user_id: str) -> str:
     return response.json()["cart_id"]
 
 
+def _add_item(cart_id: str, product_id: str, quantity: int = 1) -> dict:
+    response = client.post(
+        f"/carts/{cart_id}/items",
+        json={"product_id": product_id, "quantity": quantity},
+    )
+    return response.json()
+
+
 def test_add_item_to_cart_returns_201() -> None:
     unique_suffix = str(int(time.time() * 1000))
     user_id = _signup_user(f"cart_item_user_{unique_suffix}@example.com")
@@ -116,3 +124,55 @@ def test_add_item_to_cart_returns_404_for_missing_product() -> None:
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Product not found"
+
+
+def test_delete_cart_item_returns_200() -> None:
+    unique_suffix = str(int(time.time() * 1000))
+    user_id = _signup_user(f"cart_item_delete_{unique_suffix}@example.com")
+    cart_id = _create_cart(user_id)
+    item = _add_item(cart_id, "33333333-3333-3333-3333-000000000001", 1)
+
+    response = client.delete(f"/carts/{cart_id}/items/{item['cart_item_id']}")
+
+    assert response.status_code == 200
+
+
+def test_delete_cart_item_returns_expected_fields() -> None:
+    unique_suffix = str(int(time.time() * 1000))
+    user_id = _signup_user(f"cart_item_delete_fields_{unique_suffix}@example.com")
+    cart_id = _create_cart(user_id)
+    item = _add_item(cart_id, "33333333-3333-3333-3333-000000000001", 1)
+
+    response = client.delete(f"/carts/{cart_id}/items/{item['cart_item_id']}")
+    data = response.json()
+
+    assert "cart_item_id" in data
+    assert "cart_id" in data
+    assert "message" in data
+
+    assert data["cart_item_id"] == item["cart_item_id"]
+    assert data["cart_id"] == cart_id
+    assert data["message"] == "Cart item removed successfully"
+
+
+def test_delete_cart_item_returns_404_for_missing_cart() -> None:
+    response = client.delete(
+        "/carts/99999999-9999-9999-9999-999999999999/items/"
+        "99999999-9999-9999-9999-999999999999"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Active cart not found"
+
+
+def test_delete_cart_item_returns_404_for_missing_item() -> None:
+    unique_suffix = str(int(time.time() * 1000))
+    user_id = _signup_user(f"cart_item_delete_missing_{unique_suffix}@example.com")
+    cart_id = _create_cart(user_id)
+
+    response = client.delete(
+        f"/carts/{cart_id}/items/99999999-9999-9999-9999-999999999999"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Cart item not found"
