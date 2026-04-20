@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from backend.api.routes.auth import router as auth_router
+from backend.api.routes.cart_items import router as cart_items_router
 from backend.api.routes.carts import router as carts_router
 from backend.api.routes.health import router as health_router
 from backend.api.routes.categories import router as categories_router
@@ -18,6 +19,7 @@ app.include_router(products_router)
 app.include_router(product_detail_router)
 app.include_router(sessions_router)
 app.include_router(carts_router)
+app.include_router(cart_items_router)
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
