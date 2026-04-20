@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import text
 
 from backend.db.connection import engine
-from backend.schemas.auth import SignupRequest
+from backend.schemas.auth import LoginRequest, SignupRequest
 
 try:
     import bcrypt
@@ -19,6 +19,12 @@ def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode("utf-8")
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    password_bytes = password.encode("utf-8")
+    password_hash_bytes = password_hash.encode("utf-8")
+    return bcrypt.checkpw(password_bytes, password_hash_bytes)
 
 
 def create_user(payload: SignupRequest) -> dict[str, Any]:
@@ -87,3 +93,43 @@ def create_user(payload: SignupRequest) -> dict[str, Any]:
         )
 
     return dict(result)
+
+
+def authenticate_user(payload: LoginRequest) -> dict[str, Any]:
+    query = text("""
+        SELECT
+            user_id,
+            email,
+            user_name,
+            password_hash,
+            user_status
+        FROM users
+        WHERE email = :email
+        LIMIT 1
+    """)
+
+    with engine.connect() as connection:
+        user = connection.execute(
+            query,
+            {"email": payload.email},
+        ).mappings().first()
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+    
+    if not verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+    
+    return {
+        "user_id": user["user_id"],
+        "email": user["email"],
+        "user_name": user["user_name"],
+        "user_status": user["user_status"],
+        "message": "Login successful",
+    }

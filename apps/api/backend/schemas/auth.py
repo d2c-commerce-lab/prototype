@@ -16,3 +16,16 @@ class SignupResponse(BaseModel):
     user_name: str
     user_status: str
     marketing_opt_in_yn: bool
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=100)
+
+
+class LoginResponse(BaseModel):
+    user_id: UUID
+    email: EmailStr
+    user_name: str
+    user_status: str
+    message: str
