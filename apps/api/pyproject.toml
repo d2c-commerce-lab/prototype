@@ -9,6 +9,8 @@ dependencies = [
     "sqlalchemy",
     "psycopg[binary]",
     "pydantic-settings",
+    "email-validator",
+    "bcrypt",
     "pytest",
     "httpx",
 ]

@@ -11,6 +11,7 @@ CREATE TABLE users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL UNIQUE,
     user_name VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     signup_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_status VARCHAR(50) NOT NULL DEFAULT 'active',
     marketing_opt_in_yn BOOLEAN NOT NULL DEFAULT FALSE,
