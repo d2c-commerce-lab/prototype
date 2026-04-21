@@ -12,6 +12,7 @@ from backend.api.routes.orders import router as orders_router
 from backend.api.routes.payments import router as payments_router
 from backend.api.routes.product_detail import router as product_detail_router
 from backend.api.routes.products import router as products_router
+from backend.api.routes.reviews import router as reviews_router
 from backend.api.routes.sessions import router as sessions_router
 
 app = FastAPI(title="D2C Commerce Prototype API")
@@ -29,6 +30,7 @@ app.include_router(coupon_apply_router)
 app.include_router(orders_router)
 app.include_router(order_history_router)
 app.include_router(payments_router)
+app.include_router(reviews_router)
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
