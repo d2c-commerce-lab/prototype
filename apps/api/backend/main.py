@@ -8,6 +8,7 @@ from backend.api.routes.checkout import router as checkout_router
 from backend.api.routes.coupon_apply import router as coupon_apply_router
 from backend.api.routes.health import router as health_router
 from backend.api.routes.orders import router as orders_router
+from backend.api.routes.payments import router as payments_router
 from backend.api.routes.product_detail import router as product_detail_router
 from backend.api.routes.products import router as products_router
 from backend.api.routes.sessions import router as sessions_router
@@ -25,6 +26,7 @@ app.include_router(cart_items_router)
 app.include_router(checkout_router)
 app.include_router(coupon_apply_router)
 app.include_router(orders_router)
+app.include_router(payments_router)
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
