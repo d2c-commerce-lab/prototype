@@ -60,3 +60,57 @@ def test_create_cart_returns_existing_active_cart_for_same_user() -> None:
     assert first_response.status_code == 201
     assert second_response.status_code == 201
     assert first_data["cart_id"] == second_data["cart_id"]
+
+
+def test_get_cart_returns_200() -> None:
+    unique_suffix = str(int(time.time() * 1000))
+    user_id = _signup_user(f"cart_get_{unique_suffix}@example.com")
+    create_response = client.post("/carts", json={"user_id": user_id})
+    cart_id = create_response.json()["cart_id"]
+
+    response = client.get(f"/carts/{cart_id}")
+
+    assert response.status_code == 200
+
+
+def test_get_cart_returns_expected_fields() -> None:
+    unique_suffix = str(int(time.time() * 1000))
+    user_id = _signup_user(f"cart_get_fields_{unique_suffix}@example.com")
+    create_response = client.post("/carts", json={"user_id": user_id})
+    cart_id = create_response.json()["cart_id"]
+
+    add_item_response = client.post(
+        f"/carts/{cart_id}/items",
+        json={
+            "product_id": "33333333-3333-3333-3333-000000000001",
+            "quantity": 2,
+        },
+    )
+    assert add_item_response.status_code == 201
+
+    response = client.get(f"/carts/{cart_id}")
+    data = response.json()
+
+    assert "cart_id" in data
+    assert "user_id" in data
+    assert "cart_status" in data
+    assert "total_items" in data
+    assert "total_quantity" in data
+    assert "total_amount" in data
+    assert "currency" in data
+    assert "items" in data
+
+    assert data["cart_id"] == cart_id
+    assert data["user_id"] == user_id
+    assert data["cart_status"] == "active"
+    assert data["total_items"] == 1
+    assert data["total_quantity"] == 2
+    assert isinstance(data["items"], list)
+    assert len(data["items"]) == 1
+
+
+def test_get_cart_returns_404_for_missing_cart() -> None:
+    response = client.get("/carts/99999999-9999-9999-9999-999999999999")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Active cart not found"
