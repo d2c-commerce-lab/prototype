@@ -161,12 +161,11 @@ CREATE TABLE orders (
     order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     cart_id UUID,
-    applied_coupon_id UUID,
+    coupon_id UUID NULL,
     order_status VARCHAR(50) NOT NULL DEFAULT 'created',
-    order_amount NUMERIC(12,2) NOT NULL,
+    subtotal_amount NUMERIC(12,2) NOT NULL,
     discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
-    shipping_fee NUMERIC(12,2) NOT NULL DEFAULT 0,
-    final_paid_amount NUMERIC(12,2) NOT NULL,
+    total_amount NUMERIC(12,2) NOT NULL,
     currency VARCHAR(10) NOT NULL DEFAULT 'KRW',
     ordered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     cancelled_at TIMESTAMP,
@@ -179,7 +178,7 @@ CREATE TABLE orders (
         FOREIGN KEY (cart_id) REFERENCES carts(cart_id)
         ON DELETE SET NULL,
     CONSTRAINT fk_orders_coupon
-        FOREIGN KEY (applied_coupon_id) REFERENCES coupons(coupon_id)
+        FOREIGN KEY (coupon_id) REFERENCES coupons(coupon_id)
         ON DELETE SET NULL
 );
 
@@ -190,10 +189,9 @@ CREATE TABLE order_items (
     order_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id UUID NOT NULL,
     product_id UUID NOT NULL,
-    quantity INT NOT NULL CHECK (quantity > 0),
+    quantity INTEGER NOT NULL,
     unit_price NUMERIC(12,2) NOT NULL,
-    discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
-    final_item_amount NUMERIC(12,2) NOT NULL,
+    line_total NUMERIC(12,2) NOT NULL,
     currency VARCHAR(10) NOT NULL DEFAULT 'KRW',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
