@@ -5,6 +5,7 @@ from backend.api.routes.cart_items import router as cart_items_router
 from backend.api.routes.carts import router as carts_router
 from backend.api.routes.categories import router as categories_router
 from backend.api.routes.checkout import router as checkout_router
+from backend.api.routes.coupon_apply import router as coupon_apply_router
 from backend.api.routes.health import router as health_router
 from backend.api.routes.product_detail import router as product_detail_router
 from backend.api.routes.products import router as products_router
@@ -21,6 +22,7 @@ app.include_router(sessions_router)
 app.include_router(carts_router)
 app.include_router(cart_items_router)
 app.include_router(checkout_router)
+app.include_router(coupon_apply_router)
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
