@@ -71,6 +71,17 @@ def _get_order_item_id(order_id: str, product_id: str) -> str:
     return str(row["order_item_id"])
 
 
+def _create_review_payload(user_id: str, product_id: str, order_item_id: str) -> dict:
+    return {
+        "user_id": user_id,
+        "product_id": product_id,
+        "order_item_id": order_item_id,
+        "rating": 5,
+        "review_title": "Great product",
+        "review_content": "The product quality is excellent.",
+    }
+
+
 def test_create_review_returns_201() -> None:
     unique_suffix = str(int(time.time() * 1000))
     user_id = _signup_user(f"review_user_{unique_suffix}@example.com")
@@ -84,14 +95,7 @@ def test_create_review_returns_201() -> None:
 
     response = client.post(
         "/reviews",
-        json={
-            "user_id": user_id,
-            "product_id": product_id,
-            "order_item_id": order_item_id,
-            "rating": 5,
-            "review_title": "Great product",
-            "review_content": "The product quality is excellent.",
-        },
+        json=_create_review_payload(user_id, product_id, order_item_id),
     )
 
     assert response.status_code == 201
@@ -172,14 +176,7 @@ def test_create_review_returns_409_for_duplicate_review() -> None:
     _pay_order(order_id)
     order_item_id = _get_order_item_id(order_id, product_id)
 
-    payload = {
-        "user_id": user_id,
-        "product_id": product_id,
-        "order_item_id": order_item_id,
-        "rating": 5,
-        "review_title": "Great product",
-        "review_content": "The product quality is excellent.",
-    }
+    payload = _create_review_payload(user_id, product_id, order_item_id)
 
     first_response = client.post("/reviews", json=payload)
     second_response = client.post("/reviews", json=payload)
@@ -187,3 +184,61 @@ def test_create_review_returns_409_for_duplicate_review() -> None:
     assert first_response.status_code == 201
     assert second_response.status_code == 409
     assert second_response.json()["detail"] == "Review already exists for this order item"
+
+
+def test_update_review_returns_200() -> None:
+    unique_suffix = str(int(time.time() * 1000))
+    user_id = _signup_user(f"review_update_{unique_suffix}@example.com")
+    product_id = "33333333-3333-3333-3333-000000000001"
+
+    cart_id = _create_cart(user_id)
+    _add_item(cart_id, product_id, 1)
+    order_id = _create_order(cart_id)
+    _pay_order(order_id)
+    order_item_id = _get_order_item_id(order_id, product_id)
+
+    created = client.post(
+        "/reviews",
+        json=_create_review_payload(user_id, product_id, order_item_id),
+    ).json()
+
+    response = client.patch(
+        f"/reviews/{created['review_id']}",
+        json={
+            "user_id": user_id,
+            "rating": 4,
+            "review_title": "Updated title",
+            "review_content": "Updated content",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Review updated successfully"
+    assert response.json()["rating"] == 4
+
+
+def test_delete_review_returns_200() -> None:
+    unique_suffix = str(int(time.time() * 1000))
+    user_id = _signup_user(f"review_delete_{unique_suffix}@example.com")
+    product_id = "33333333-3333-3333-3333-000000000001"
+
+    cart_id = _create_cart(user_id)
+    _add_item(cart_id, product_id, 1)
+    order_id = _create_order(cart_id)
+    _pay_order(order_id)
+    order_item_id = _get_order_item_id(order_id, product_id)
+
+    created = client.post(
+        "/reviews",
+        json=_create_review_payload(user_id, product_id, order_item_id),
+    ).json()
+
+    response = client.request(
+        "DELETE",
+        f"/reviews/{created['review_id']}",
+        json={"user_id": user_id},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Review deleted successfully"
+    assert response.json()["review_status"] == "deleted"

@@ -4,7 +4,11 @@ from fastapi import HTTPException, status
 from sqlalchemy import text
 
 from backend.db.connection import engine
-from backend.schemas.review import ReviewCreateRequest
+from backend.schemas.review import (
+    ReviewCreateRequest,
+    ReviewDeleteRequest,
+    ReviewUpdateRequest,
+)
 
 
 def create_review(payload: ReviewCreateRequest) -> dict[str, Any]:
@@ -164,4 +168,174 @@ def create_review(payload: ReviewCreateRequest) -> dict[str, Any]:
         "created_at": created_review["created_at"],
         "updated_at": created_review["updated_at"],
         "message": "Review created successfully",
+    }
+
+
+def update_review(review_id: str, payload: ReviewUpdateRequest) -> dict[str, Any]:
+    review_query = text("""
+        SELECT
+            review_id,
+            user_id,
+            product_id,
+            order_item_id,
+            rating,
+            review_title,
+            review_content,
+            review_status,
+            created_at,
+            updated_at
+        FROM reviews
+        WHERE review_id = :review_id
+        LIMIT 1
+    """)
+
+    update_review_query = text("""
+        UPDATE reviews
+        SET
+            rating = :rating,
+            review_title = :review_title,
+            review_content = :review_content,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE review_id = :review_id
+        RETURNING
+            review_id,
+            user_id,
+            product_id,
+            order_item_id,
+            rating,
+            review_title,
+            review_content,
+            review_status,
+            created_at,
+            updated_at
+    """)
+
+    with engine.begin() as connection:
+        review = connection.execute(
+            review_query,
+            {"review_id": review_id},
+        ).mappings().first()
+
+        if review is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Review not found",
+            )
+
+        if str(review["user_id"]) != str(payload.user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only update your own review",
+            )
+
+        if review["review_status"] == "deleted":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Deleted review cannot be updated",
+            )
+
+        updated_review = connection.execute(
+            update_review_query,
+            {
+                "review_id": review_id,
+                "rating": payload.rating if payload.rating is not None else review["rating"],
+                "review_title": (
+                    payload.review_title
+                    if payload.review_title is not None
+                    else review["review_title"]
+                ),
+                "review_content": (
+                    payload.review_content
+                    if payload.review_content is not None
+                    else review["review_content"]
+                ),
+            },
+        ).mappings().first()
+
+        if updated_review is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update review",
+            )
+
+    return {
+        "review_id": updated_review["review_id"],
+        "user_id": updated_review["user_id"],
+        "product_id": updated_review["product_id"],
+        "order_item_id": updated_review["order_item_id"],
+        "rating": updated_review["rating"],
+        "review_title": updated_review["review_title"],
+        "review_content": updated_review["review_content"],
+        "review_status": updated_review["review_status"],
+        "created_at": updated_review["created_at"],
+        "updated_at": updated_review["updated_at"],
+        "message": "Review updated successfully",
+    }
+
+
+def delete_review(review_id: str, payload: ReviewDeleteRequest) -> dict[str, Any]:
+    review_query = text("""
+        SELECT
+            review_id,
+            user_id,
+            review_status
+        FROM reviews
+        WHERE review_id = :review_id
+        LIMIT 1
+    """)
+
+    delete_review_query = text("""
+        UPDATE reviews
+        SET
+            review_status = 'deleted',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE review_id = :review_id
+        RETURNING
+            review_id,
+            user_id,
+            review_status,
+            updated_at
+    """)
+
+    with engine.begin() as connection:
+        review = connection.execute(
+            review_query,
+            {"review_id": review_id},
+        ).mappings().first()
+
+        if review is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Review not found",
+            )
+
+        if str(review["user_id"]) != str(payload.user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only delete your own review",
+            )
+
+        if review["review_status"] == "deleted":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Review is already deleted",
+            )
+
+        deleted_review = connection.execute(
+            delete_review_query,
+            {"review_id": review_id},
+        ).mappings().first()
+
+        if deleted_review is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete review",
+            )
+
+    return {
+        "review_id": deleted_review["review_id"],
+        "user_id": deleted_review["user_id"],
+        "review_status": deleted_review["review_status"],
+        "updated_at": deleted_review["updated_at"],
+        "message": "Review deleted successfully",
     }
