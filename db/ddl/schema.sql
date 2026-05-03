@@ -189,12 +189,14 @@ CREATE TABLE order_items (
     order_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id UUID NOT NULL,
     product_id UUID NOT NULL,
-    quantity INTEGER NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
     unit_price NUMERIC(12,2) NOT NULL,
-    line_total NUMERIC(12,2) NOT NULL,
+    discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+    final_item_amount NUMERIC(12,2) NOT NULL,
     currency VARCHAR(10) NOT NULL DEFAULT 'KRW',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    line_total NUMERIC(12,2) NOT NULL DEFAULT 0,
     CONSTRAINT fk_order_items_order
         FOREIGN KEY (order_id) REFERENCES orders(order_id)
         ON DELETE CASCADE,
