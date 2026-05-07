@@ -1,23 +1,69 @@
-# env
+# =========================
+# Environment / secrets
+# =========================
 .env
 .env.local
+.env.*
+!.env.example
+
+# Virtual environments
 .venv/
 venv/
+env/
 
-# python
+# =========================
+# Python
+# =========================
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / cache
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
-# node
+# Jupyter / local python
+.ipynb_checkpoints/
+
+# =========================
+# Node / Frontend
+# =========================
 node_modules/
 .next/
 dist/
+out/
+coverage/
 
-# logs
+# =========================
+# Logs
+# =========================
 *.log
+logs/
 
-# os
+# =========================
+# OS / Editor
+# =========================
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# Local database / temp
+# =========================
+*.sqlite3
+*.db
+tmp/
+temp/
