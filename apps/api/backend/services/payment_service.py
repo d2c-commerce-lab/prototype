@@ -105,7 +105,6 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
         if payload.simulate_result == "success":
             payment_status = "paid"
             paid_amount = requested_amount
-            approved_amount = requested_amount
             failure_code = None
             paid_at = datetime.now()
             pg_provider = "mock_pg"
@@ -117,7 +116,6 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
         else:
             payment_status = "failed"
             paid_amount = Decimal("0")
-            approved_amount = Decimal("0")
             failure_code = "SIMULATED_FAILURE"
             paid_at = None
             pg_provider = "mock_pg"
