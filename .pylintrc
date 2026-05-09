@@ -1,0 +1,25 @@
+[MASTER]
+ignore=.venv,venv,node_modules,dist,build
+ignore-patterns=node_modules,dist,build
+
+[MESSAGES CONTROL]
+disable=
+    C0114,
+    C0115,
+    C0116,
+    R0903,
+    R0913,
+    R0914,
+    R0915,
+    W0718,
+    W1203
+
+[FORMAT]
+max-line-length=100
+
+[DESIGN]
+max-args=8
+max-locals=20
+max-returns=8
+max-branches=15
+max-statements=60
