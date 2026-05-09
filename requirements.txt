@@ -19,6 +19,7 @@ packaging==26.1
 pluggy==1.6.0
 psycopg==3.3.3
 psycopg-binary==3.3.3
+psycopg2-binary==2.9.10
 pydantic==2.13.2
 pydantic-settings==2.13.1
 pydantic_core==2.46.2
