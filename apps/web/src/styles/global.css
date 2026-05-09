@@ -1,6 +1,10 @@
 :root {
   font-family:
     Inter,
+    "Pretendard",
+    "Noto Sans KR",
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
@@ -88,7 +92,7 @@ textarea {
 }
 
 .app-main {
-  width: min(1120px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 48px));
   margin: 0 auto;
   padding: 48px 0;
 }
@@ -153,4 +157,169 @@ textarea {
 
 .signup-link:hover {
   background-color: #374151;
+}
+
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.home-hero {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(17, 24, 39, 0.1), transparent 34%),
+    #ffffff;
+}
+
+.home-hero-content {
+  max-width: 720px;
+  padding: 48px 40px;
+}
+
+.home-eyebrow {
+  margin: 0 0 12px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.home-hero h1 {
+  max-width: 680px;
+  margin: 0 0 18px;
+  color: #111827;
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.04em;
+  word-break: keep-all;
+}
+
+.home-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.home-panel-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.home-description {
+  max-width: 620px;
+  margin: 0;
+  color: #4b5563;
+  font-size: 16px;
+  line-height: 1.75;
+  word-break: keep-all;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-card {
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 26px 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background-color: #ffffff;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.home-card:hover {
+  transform: translateY(-2px);
+  border-color: #d1d5db;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.07);
+}
+
+.home-card-label {
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.home-card h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.home-card p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 15px;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+.home-account-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 30px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  background-color: #ffffff;
+}
+
+.home-account-panel h2 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  word-break: keep-all;
+}
+
+.home-account-panel p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+@media (max-width: 960px) {
+  .home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-account-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .home-panel-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-hero-content {
+    padding: 40px 24px;
+  }
+
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
 }
