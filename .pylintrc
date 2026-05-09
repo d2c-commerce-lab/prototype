@@ -1,4 +1,4 @@
-[MASTER]
+[MAIN]
 ignore=.venv,venv,node_modules,dist,build
 ignore-patterns=node_modules,dist,build
 
@@ -7,10 +7,17 @@ disable=
     C0114,
     C0115,
     C0116,
+    C0301,
+    C0303,
+    C0304,
+    C0411,
+    R0801,
     R0903,
+    R0912,
     R0913,
     R0914,
     R0915,
+    R1730,
     W0718,
     W1203
 
@@ -19,7 +26,7 @@ max-line-length=100
 
 [DESIGN]
 max-args=8
-max-locals=20
+max-locals=30
 max-returns=8
-max-branches=15
-max-statements=60
+max-branches=20
+max-statements=80

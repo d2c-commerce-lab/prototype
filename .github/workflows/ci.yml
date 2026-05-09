@@ -75,7 +75,7 @@ jobs:
 
       - name: Run Pylint
         run: |
-          pylint backend tests
+          pylint --rcfile=../../.pylintrc backend tests
 
       - name: Apply database schema
         run: |
