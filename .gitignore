@@ -5,6 +5,7 @@
 .env.local
 .env.*
 !.env.example
+!**/.env.example
 
 # Virtual environments
 .venv/
@@ -41,10 +42,17 @@ htmlcov/
 # Node / Frontend
 # =========================
 node_modules/
+**/node_modules/
 .next/
 dist/
+**/dist/
 out/
 coverage/
+**/coverage/
+
+# Vite cache
+.vite/
+**/.vite/
 
 # =========================
 # Logs
