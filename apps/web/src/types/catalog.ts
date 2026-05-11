@@ -17,3 +17,5 @@ export type Product = {
   brand_name: string | null;
   is_active: boolean;
 };
+
+export type ProductDetail = Product;
