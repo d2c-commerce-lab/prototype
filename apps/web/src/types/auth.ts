@@ -5,6 +5,11 @@ export type SignupRequest = {
     marketing_opt_in_yn: boolean;
 };
 
+export type LoginRequest = {
+    email: string;
+    password: string;
+}
+
 export type AuthUser = {
     user_id: string;
     email: string;

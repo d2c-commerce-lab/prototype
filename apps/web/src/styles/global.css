@@ -812,6 +812,11 @@ textarea {
   outline-offset: 2px;
 }
 
+.form-field input:-webkit-autofill {
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  -webkit-text-fill-color: #111827;
+}
+
 .checkbox-field {
   display: flex;
   align-items: center;
