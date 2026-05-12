@@ -22,6 +22,7 @@ class CartItemSummaryResponse(BaseModel):
     cart_item_id: UUID
     product_id: UUID
     product_name: str
+    brand_name: str | None = None
     quantity: int
     unit_price: Decimal
     currency: str

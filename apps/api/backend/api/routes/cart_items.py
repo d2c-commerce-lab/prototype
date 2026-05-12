@@ -5,9 +5,14 @@ from fastapi import APIRouter, status
 from backend.schemas.cart_item import (
     CartItemCreateRequest,
     CartItemDeleteResponse,
+    CartItemQuantityUpdateRequest,
     CartItemResponse,
 )
-from backend.services.cart_item_service import add_item_to_cart, remove_item_from_cart
+from backend.services.cart_item_service import (
+    add_item_to_cart,
+    remove_item_from_cart,
+    update_cart_item_quantity,
+)
 
 router = APIRouter(prefix="/carts", tags=["carts"])
 
@@ -30,3 +35,17 @@ def add_cart_item(cart_id: UUID, payload: CartItemCreateRequest) -> CartItemResp
 def delete_cart_item(cart_id: UUID, cart_item_id: UUID) -> CartItemDeleteResponse:
     result = remove_item_from_cart(cart_id, cart_item_id)
     return CartItemDeleteResponse(**result)
+
+
+@router.patch(
+    "/{cart_id}/items/{cart_item_id}",
+    response_model=CartItemResponse,
+    status_code=status.HTTP_200_OK,
+)
+def patch_cart_item_quantity(
+    cart_id: UUID,
+    cart_item_id: UUID,
+    payload: CartItemQuantityUpdateRequest,
+) -> CartItemResponse:
+    item = update_cart_item_quantity(cart_id, cart_item_id, payload)
+    return CartItemResponse(**item)

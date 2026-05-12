@@ -1,10 +1,25 @@
-import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link } from "react-router-dom";
+import { addCartItem, createCart } from "../../services/cartApi";
 import { getCategories, getProducts } from "../../services/catalogApi";
+import {
+  getStoredCartId,
+  getStoredUser,
+  setStoredCartId,
+} from "../../stores/userStore";
 import type { Category, Product } from "../../types/catalog";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
 const DEFAULT_PAGE_SIZE = 24;
+const QUICK_ADD_QUANTITY = 1;
 
 function formatPrice(value: string | number, currency: string) {
   const numericValue = Number(value);
@@ -35,6 +50,9 @@ export function ProductListPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [cartFeedbackMessage, setCartFeedbackMessage] = useState<string | null>(null);
+  const [cartErrorMessage, setCartErrorMessage] = useState<string | null>(null);
+  const [addingProductId, setAddingProductId] = useState<string | null>(null);
 
   const productListTopRef = useRef<HTMLDivElement | null>(null);
 
@@ -103,6 +121,8 @@ export function ProductListPage() {
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
+    setCartFeedbackMessage(null);
+    setCartErrorMessage(null);
   };
 
   const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
@@ -121,6 +141,49 @@ export function ProductListPage() {
     scrollToProductListTop();
   };
 
+  const handleQuickAddToCart = async (
+    event: MouseEvent<HTMLButtonElement>,
+    product: Product,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const user = getStoredUser();
+
+    if (!user) {
+      setCartFeedbackMessage(null);
+      setCartErrorMessage("로그인 후 장바구니에 상품을 담을 수 있습니다.");
+      return;
+    }
+
+    try {
+      setAddingProductId(product.product_id);
+      setCartFeedbackMessage(null);
+      setCartErrorMessage(null);
+
+      let cartId = getStoredCartId();
+
+      if (!cartId) {
+        const createdCart = await createCart({
+          user_id: user.user_id,
+        });
+
+        cartId = createdCart.cart_id;
+        setStoredCartId(cartId);
+      }
+
+      await addCartItem(cartId, {
+        product_id: product.product_id,
+        quantity: QUICK_ADD_QUANTITY,
+      });
+
+    } catch {
+      setCartErrorMessage("장바구니 담기에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setAddingProductId(null);
+    }
+  };
+
   return (
     <section className="product-list-page">
       <div className="product-list-header">
@@ -128,8 +191,8 @@ export function ProductListPage() {
           <p className="section-eyebrow">Product Catalog</p>
           <h1>카테고리별 상품을 탐색해보세요.</h1>
           <p>
-            상품 목록에서 관심 상품을 선택하면 상세 화면으로 이동하여 장바구니 담기
-            흐름을 이어갈 수 있습니다.
+            상품 목록에서 관심 상품을 선택하면 상세 화면으로 이동하거나 바로 장바구니에
+            담아 구매 흐름을 이어갈 수 있습니다.
           </p>
         </div>
       </div>
@@ -182,6 +245,13 @@ export function ProductListPage() {
         </label>
       </div>
 
+      {(cartFeedbackMessage || cartErrorMessage) && (
+        <div className="product-list-feedback" aria-live="polite">
+          {cartFeedbackMessage && <div className="state-box success">{cartFeedbackMessage}</div>}
+          {cartErrorMessage && <div className="state-box error">{cartErrorMessage}</div>}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="state-box">상품 목록을 불러오는 중입니다.</div>
       ) : errorMessage ? (
@@ -191,33 +261,50 @@ export function ProductListPage() {
       ) : (
         <>
           <div className="product-grid">
-            {paginatedProducts.map((product) => (
-              <Link
-                key={product.product_id}
-                to={`/products/${product.product_id}`}
-                className="product-card"
-              >
-                <div className="product-image-placeholder">
-                  <span>{product.brand_name ?? "D2C"}</span>
-                </div>
+            {paginatedProducts.map((product) => {
+              const isAddingCurrentProduct = addingProductId === product.product_id;
+              const isDiscounted = Number(product.list_price) !== Number(product.sale_price);
 
-                <div className="product-card-body">
-                  <div className="product-meta">
-                    <span>{product.brand_name ?? "브랜드 미지정"}</span>
-                    <span>{product.product_status}</span>
+              return (
+                <Link
+                  key={product.product_id}
+                  to={`/products/${product.product_id}`}
+                  className="product-card"
+                >
+                  <div className="product-image-placeholder">
+                    <span>{product.brand_name ?? "D2C"}</span>
                   </div>
 
-                  <h3>{product.product_name}</h3>
+                  <div className="product-card-body">
+                    <div className="product-meta">
+                      <span>{product.brand_name || "브랜드 미지정"}</span>
+                      <span>{product.product_status}</span>
+                    </div>
 
-                  <div className="product-price-row">
-                    <strong>{formatPrice(product.sale_price, product.currency)}</strong>
-                    {Number(product.list_price) !== Number(product.sale_price) && (
-                      <span>{formatPrice(product.list_price, product.currency)}</span>
-                    )}
+                    <h3>{product.product_name}</h3>
+
+                    <div className="product-card-footer">
+                      <div className="product-price-row">
+                        <strong>{formatPrice(product.sale_price, product.currency)}</strong>
+                        {isDiscounted && (
+                          <span>{formatPrice(product.list_price, product.currency)}</span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="product-card-cart-button"
+                        onClick={(event) => handleQuickAddToCart(event, product)}
+                        disabled={isAddingCurrentProduct || !product.is_active}
+                        aria-label={`${product.product_name} 장바구니 담기`}
+                      >
+                        {isAddingCurrentProduct ? "담는 중" : "담기"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="pagination">

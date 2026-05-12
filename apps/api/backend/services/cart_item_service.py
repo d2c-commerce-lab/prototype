@@ -5,7 +5,10 @@ from fastapi import HTTPException, status
 from sqlalchemy import text
 
 from backend.db.connection import engine
-from backend.schemas.cart_item import CartItemCreateRequest
+from backend.schemas.cart_item import (
+    CartItemCreateRequest, 
+    CartItemQuantityUpdateRequest,
+)
 
 
 def add_item_to_cart(cart_id: UUID, payload: CartItemCreateRequest) -> dict[str, Any]:
@@ -236,3 +239,102 @@ def remove_item_from_cart(cart_id: UUID, cart_item_id: UUID) -> dict[str, Any]:
             "cart_id": deleted_item["cart_id"],
             "message": "Cart item removed successfully",
         }
+    
+def update_cart_item_quantity(
+    cart_id: UUID,
+    cart_item_id: UUID,
+    payload: CartItemQuantityUpdateRequest,
+) -> dict[str, Any]:
+    cart_query = text("""
+        SELECT
+            cart_id,
+            cart_status
+        FROM carts
+        WHERE cart_id = :cart_id
+          AND cart_status = 'active'
+        LIMIT 1
+    """)
+
+    item_query = text("""
+        SELECT
+            cart_item_id,
+            cart_id,
+            product_id,
+            unit_price,
+            currency
+        FROM cart_items
+        WHERE cart_id = :cart_id
+          AND cart_item_id = :cart_item_id
+        LIMIT 1
+    """)
+
+    update_query = text("""
+        UPDATE cart_items
+        SET
+            quantity = :quantity,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE cart_id = :cart_id
+          AND cart_item_id = :cart_item_id
+        RETURNING
+            cart_item_id,
+            cart_id,
+            product_id,
+            quantity,
+            unit_price,
+            currency,
+            added_at,
+            updated_at
+    """)
+
+    with engine.begin() as connection:
+        cart = connection.execute(
+            cart_query,
+            {"cart_id": cart_id},
+        ).mappings().first()
+
+        if cart is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Active cart not found",
+            )
+
+        item = connection.execute(
+            item_query,
+            {
+                "cart_id": cart_id,
+                "cart_item_id": cart_item_id,
+            },
+        ).mappings().first()
+
+        if item is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cart item not found",
+            )
+
+        updated_item = connection.execute(
+            update_query,
+            {
+                "cart_id": cart_id,
+                "cart_item_id": cart_item_id,
+                "quantity": payload.quantity,
+            },
+        ).mappings().first()
+
+        if updated_item is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update cart item quantity",
+            )
+
+    return {
+        "cart_item_id": updated_item["cart_item_id"],
+        "cart_id": updated_item["cart_id"],
+        "product_id": updated_item["product_id"],
+        "quantity": updated_item["quantity"],
+        "unit_price": updated_item["unit_price"],
+        "currency": updated_item["currency"],
+        "added_at": updated_item["added_at"],
+        "updated_at": updated_item["updated_at"],
+        "message": "Cart item quantity updated successfully",
+    }
