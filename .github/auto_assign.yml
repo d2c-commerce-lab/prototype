@@ -1,0 +1,16 @@
+# Automatically assign the pull request author as assignee.
+addAssignees: author
+
+# Reviewer auto-assignment is disabled for this solo project.
+addReviewers: false
+
+# Keep reviewers empty unless external reviewers are added later.
+reviewers: []
+
+# Skip auto assignment for draft-like PR titles.
+skipKeywords:
+  - wip
+  - draft
+
+# 0 means all configured reviewers, but reviewers are disabled above.
+numberOfReviewers: 0

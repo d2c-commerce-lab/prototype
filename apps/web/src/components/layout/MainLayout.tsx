@@ -1,8 +1,28 @@
+import { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router-dom";
-import { clearStoredUser, getStoredUser } from "../../stores/userStore";
+import {
+  clearStoredUser,
+  getStoredUser,
+  USER_STORAGE_EVENT,
+} from "../../stores/userStore";
+import type { AuthUser } from "../../types/auth";
 
 export function MainLayout() {
-  const user = getStoredUser();
+  const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
+
+  useEffect(() => {
+    const syncUser = () => {
+      setUser(getStoredUser());
+    };
+
+    window.addEventListener(USER_STORAGE_EVENT, syncUser);
+    window.addEventListener("storage", syncUser);
+
+    return () => {
+      window.removeEventListener(USER_STORAGE_EVENT, syncUser);
+      window.removeEventListener("storage", syncUser);
+    };
+  }, []);
 
   const handleLogout = () => {
     clearStoredUser();
