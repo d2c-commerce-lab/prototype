@@ -25,3 +25,7 @@ class CartItemDeleteResponse(BaseModel):
     cart_item_id: UUID
     cart_id: UUID
     message: str
+
+
+class CartItemQuantityUpdateRequest(BaseModel):
+    quantity: int = Field(ge=1, le=999)
