@@ -55,6 +55,16 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
         LIMIT 1
     """)
 
+    used_coupon_query = text("""
+        SELECT
+            order_id
+        FROM orders
+        WHERE user_id = :user_id
+        AND coupon_id = :coupon_id
+        AND order_status = 'paid'
+        LIMIT 1
+    """)
+
     insert_order_query = text("""
         INSERT INTO orders (
             user_id,
@@ -129,15 +139,6 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
             currency
     """)
 
-    update_cart_query = text("""
-        UPDATE carts
-        SET
-            cart_status = 'checked_out',
-            checked_out_at = CURRENT_TIMESTAMP,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE cart_id = :cart_id
-    """)
-
     with engine.begin() as connection:
         cart = connection.execute(
             cart_query,
@@ -198,6 +199,20 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Coupon not found",
+                )
+
+            used_coupon = connection.execute(
+                used_coupon_query,
+                {
+                    "user_id": cart["user_id"],
+                    "coupon_id": coupon["coupon_id"],
+                },
+            ).mappings().first()
+
+            if used_coupon is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Coupon has already been used",
                 )
 
             minimum_order_amount = Decimal(str(coupon["minimum_order_amount"]))
@@ -282,11 +297,6 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
                     "currency": created_order_item["currency"],
                 }
             )
-
-        connection.execute(
-            update_cart_query,
-            {"cart_id": payload.cart_id},
-        )
 
     return {
         "order_id": created_order["order_id"],

@@ -5,7 +5,11 @@ import {
   removeCartItem,
   updateCartItemQuantity,
 } from "../../services/cartApi";
-import { getStoredCartId, getStoredUser } from "../../stores/userStore";
+import { 
+  clearStoredCartId,
+  getStoredCartId, 
+  getStoredUser, 
+} from "../../stores/userStore";
 import type { CartDetail, CartItem } from "../../types/cart";
 
 type CartItemWithTotals = CartItem & {
@@ -105,7 +109,9 @@ export function CartPage() {
       const cartData = await getCart(storedCartId);
       setCart(cartData);
     } catch {
-      setErrorMessage("장바구니 정보를 불러오지 못했습니다.");
+      clearStoredCartId();
+      setCart(null);
+      setErrorMessage(null);
     } finally {
       setIsLoading(false);
     }
@@ -326,7 +332,7 @@ export function CartPage() {
                           key={`${item.cart_item_id}-${item.quantity}`}
                           type="number"
                           min="1"
-                          max="999"
+                          max="99"
                           defaultValue={item.quantity}
                           disabled={updatingItemId === item.cart_item_id}
                           onBlur={(event) => {

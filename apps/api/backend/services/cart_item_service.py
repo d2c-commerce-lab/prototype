@@ -10,6 +10,7 @@ from backend.schemas.cart_item import (
     CartItemQuantityUpdateRequest,
 )
 
+MAX_CART_ITEM_QUANTITY = 99
 
 def add_item_to_cart(cart_id: UUID, payload: CartItemCreateRequest) -> dict[str, Any]:
     cart_query = text("""
@@ -135,6 +136,14 @@ def add_item_to_cart(cart_id: UUID, payload: CartItemCreateRequest) -> dict[str,
         ).mappings().first()
 
         if existing_item is not None:
+            next_quantity = existing_item["quantity"] + payload.quantity
+
+            if next_quantity > MAX_CART_ITEM_QUANTITY:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cart item quantity cannot exceed 99",
+                )
+
             updated_item = connection.execute(
                 update_item_query,
                 {

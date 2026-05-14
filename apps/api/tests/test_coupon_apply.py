@@ -37,7 +37,7 @@ def test_apply_coupon_returns_200_for_valid_coupon() -> None:
     _add_item(cart_id, "33333333-3333-3333-3333-000000000001", 2)
 
     response = client.post(
-        f"/carts/{cart_id}/coupon",
+        f"/carts/{cart_id}/apply-coupon",
         json={"coupon_name": "WELCOME10"},
     )
 
@@ -51,7 +51,7 @@ def test_apply_coupon_returns_expected_fields() -> None:
     _add_item(cart_id, "33333333-3333-3333-3333-000000000001", 2)
 
     response = client.post(
-        f"/carts/{cart_id}/coupon",
+        f"/carts/{cart_id}/apply-coupon",
         json={"coupon_name": "WELCOME10"},
     )
     data = response.json()
@@ -75,7 +75,7 @@ def test_apply_coupon_returns_404_for_missing_coupon() -> None:
     _add_item(cart_id, "33333333-3333-3333-3333-000000000001", 2)
 
     response = client.post(
-        f"/carts/{cart_id}/coupon",
+        f"/carts/{cart_id}/apply-coupon",
         json={"coupon_name": "NOT_EXIST_COUPON"},
     )
 
@@ -89,7 +89,7 @@ def test_apply_coupon_returns_400_for_empty_cart() -> None:
     cart_id = _create_cart(user_id)
 
     response = client.post(
-        f"/carts/{cart_id}/coupon",
+        f"/carts/{cart_id}/apply-coupon",
         json={"coupon_name": "WELCOME10"},
     )
 

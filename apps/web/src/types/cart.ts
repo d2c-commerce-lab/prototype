@@ -17,6 +17,7 @@ export type CartItem = {
   quantity: number;
   unit_price: string | number;
   line_amount?: string | number;
+  line_total?: string | number;
   currency: string;
 };
 

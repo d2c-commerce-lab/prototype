@@ -36,7 +36,7 @@ def test_checkout_returns_200_for_valid_cart() -> None:
     cart_id = _create_cart(user_id)
     _add_item(cart_id, "33333333-3333-3333-3333-000000000001", 2)
 
-    response = client.post(f"/carts/{cart_id}/checkout")
+    response = client.get(f"/checkout/{cart_id}")
 
     assert response.status_code == 200
 
@@ -47,7 +47,7 @@ def test_checkout_returns_expected_fields() -> None:
     cart_id = _create_cart(user_id)
     _add_item(cart_id, "33333333-3333-3333-3333-000000000001", 2)
 
-    response = client.post(f"/carts/{cart_id}/checkout")
+    response = client.get(f"/checkout/{cart_id}")
     data = response.json()
 
     assert "cart_id" in data
@@ -74,14 +74,14 @@ def test_checkout_returns_400_for_empty_cart() -> None:
     user_id = _signup_user(f"checkout_empty_{unique_suffix}@example.com")
     cart_id = _create_cart(user_id)
 
-    response = client.post(f"/carts/{cart_id}/checkout")
+    response = client.get(f"/checkout/{cart_id}")
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Cart is empty"
 
 
 def test_checkout_returns_404_for_missing_cart() -> None:
-    response = client.post("/carts/99999999-9999-9999-9999-999999999999/checkout")
+    response = client.get("/checkout/99999999-9999-9999-9999-999999999999")
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Active cart not found"

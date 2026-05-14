@@ -13,6 +13,7 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
     order_query = text("""
         SELECT
             order_id,
+            cart_id,
             order_status,
             total_amount,
             currency
@@ -81,6 +82,16 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
         WHERE order_id = :order_id
     """)
 
+    update_cart_checked_out_query = text("""
+        UPDATE carts
+        SET
+            cart_status = 'checked_out',
+            checked_out_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE cart_id = :cart_id
+        AND cart_status = 'active'
+    """)
+
     with engine.begin() as connection:
         order = connection.execute(
             order_query,
@@ -109,9 +120,15 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
             paid_at = datetime.now()
             pg_provider = "mock_pg"
             transaction_id = f"tx-{payload.order_id}"
+
             connection.execute(
                 update_order_success_query,
                 {"order_id": payload.order_id},
+            )
+
+            connection.execute(
+                update_cart_checked_out_query,
+                {"cart_id": order["cart_id"]},
             )
         else:
             payment_status = "failed"

@@ -13,6 +13,7 @@ def apply_coupon_to_cart(cart_id: UUID, payload: CouponApplyRequest) -> dict[str
     cart_query = text("""
         SELECT
             c.cart_id,
+            c.user_id,
             c.cart_status
         FROM carts c
         WHERE c.cart_id = :cart_id
@@ -44,6 +45,16 @@ def apply_coupon_to_cart(cart_id: UUID, payload: CouponApplyRequest) -> dict[str
           AND coupon_status = 'active'
           AND valid_start_at <= CURRENT_TIMESTAMP
           AND valid_end_at >= CURRENT_TIMESTAMP
+        LIMIT 1
+    """)
+
+    used_coupon_query = text("""
+        SELECT
+            order_id
+        FROM orders
+        WHERE user_id = :user_id
+        AND coupon_id = :coupon_id
+        AND order_status = 'paid'
         LIMIT 1
     """)
 
@@ -79,6 +90,20 @@ def apply_coupon_to_cart(cart_id: UUID, payload: CouponApplyRequest) -> dict[str
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Coupon not found",
+            )
+        
+        used_coupon = connection.execute(
+            used_coupon_query,
+            {
+                "user_id": cart["user_id"],
+                "coupon_id": coupon["coupon_id"],
+            },
+        ).mappings().first()
+
+        if used_coupon is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Coupon has already been used",
             )
 
     total_amount = Decimal(str(total_row["total_amount"]))
