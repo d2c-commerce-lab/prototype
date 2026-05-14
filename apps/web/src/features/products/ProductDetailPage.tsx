@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { addCartItem, createCart } from "../../services/cartApi";
 import { getProductDetail } from "../../services/catalogApi";
 import {
+  clearStoredCartId,
   getStoredCartId,
   getStoredUser,
   setStoredCartId,
@@ -105,14 +106,30 @@ export function ProductDetailPage() {
         setStoredCartId(cartId);
       }
 
-      await addCartItem(cartId, {
-        product_id: product.product_id,
-        quantity,
-      });
+      try {
+        await addCartItem(cartId, {
+          product_id: product.product_id,
+          quantity,
+        });
+      } catch {
+        clearStoredCartId();
+
+        const createdCart = await createCart({
+          user_id: user.user_id,
+        });
+
+        cartId = createdCart.cart_id;
+        setStoredCartId(cartId);
+
+        await addCartItem(cartId, {
+          product_id: product.product_id,
+          quantity,
+        });
+      }
 
       setCartMessage("상품을 장바구니에 담았습니다.");
     } catch {
-      setCartErrorMessage("장바구니 담기에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      setCartErrorMessage("상품 수량은 최대 99개까지만 담을 수 있습니다.");
     } finally {
       setIsAddingToCart(false);
     }

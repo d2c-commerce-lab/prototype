@@ -5,11 +5,11 @@ from fastapi import APIRouter, status
 from backend.schemas.coupon_apply import CouponApplyRequest, CouponApplyResponse
 from backend.services.coupon_service import apply_coupon_to_cart
 
-router = APIRouter(prefix="/carts", tags=["checkout"])
+router = APIRouter(prefix="/carts", tags=["coupons"])
 
 
 @router.post(
-    "/{cart_id}/coupon",
+    "/{cart_id}/apply-coupon",
     response_model=CouponApplyResponse,
     status_code=status.HTTP_200_OK,
 )

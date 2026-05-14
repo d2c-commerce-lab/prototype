@@ -5,11 +5,11 @@ from fastapi import APIRouter, status
 from backend.schemas.checkout import CheckoutResponse
 from backend.services.checkout_service import prepare_checkout
 
-router = APIRouter(prefix="/carts", tags=["checkout"])
+router = APIRouter(prefix="/checkout", tags=["checkout"])
 
 
-@router.post(
-    "/{cart_id}/checkout",
+@router.get(
+    "/{cart_id}",
     response_model=CheckoutResponse,
     status_code=status.HTTP_200_OK,
 )

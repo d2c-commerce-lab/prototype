@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class CartItemCreateRequest(BaseModel):
     product_id: UUID
-    quantity: int = Field(gt=0, le=100)
+    quantity: int = Field(ge=1, le=99)
 
 
 class CartItemResponse(BaseModel):
@@ -28,4 +28,4 @@ class CartItemDeleteResponse(BaseModel):
 
 
 class CartItemQuantityUpdateRequest(BaseModel):
-    quantity: int = Field(ge=1, le=999)
+    quantity: int = Field(ge=1, le=99)
