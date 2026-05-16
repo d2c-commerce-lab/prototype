@@ -6,10 +6,13 @@ import {
   enterCheckout,
   simulatePayment,
 } from "../../services/checkoutApi";
-import { 
+import {
   clearStoredCartId,
-  getStoredCartId, 
-  getStoredUser, 
+  clearStoredPendingOrder,
+  getStoredCartId,
+  getStoredPendingOrder,
+  getStoredUser,
+  setStoredPendingOrder,
 } from "../../stores/userStore";
 import type {
   CheckoutSummary,
@@ -76,6 +79,7 @@ export function CheckoutPage() {
 
   const storedUser = getStoredUser();
   const userId = storedUser?.user_id ?? null;
+
   const [checkoutCartId, setCheckoutCartId] = useState<string | null>(() =>
     getStoredCartId(),
   );
@@ -83,7 +87,17 @@ export function CheckoutPage() {
   const [checkout, setCheckout] = useState<CheckoutSummary | null>(null);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<CouponApplyResponse | null>(null);
-  const [createdOrder, setCreatedOrder] = useState<OrderCreateResponse | null>(null);
+  const [createdOrder, setCreatedOrder] = useState<OrderCreateResponse | null>(
+    () => {
+      const storedCartId = getStoredCartId();
+
+      if (!storedCartId) {
+        return null;
+      }
+
+      return getStoredPendingOrder(storedCartId) as OrderCreateResponse | null;
+    },
+  );
   const [paymentResult, setPaymentResult] = useState<PaymentSimulationResponse | null>(
     null,
   );
@@ -137,7 +151,12 @@ export function CheckoutPage() {
         const checkoutData = await enterCheckout(checkoutCartId);
         setCheckout(checkoutData);
       } catch {
+        if (checkoutCartId) {
+          clearStoredPendingOrder(checkoutCartId);
+        }
+
         clearStoredCartId();
+        setCheckoutCartId(null);
         setCheckout(null);
         setErrorMessage(
           "장바구니 정보를 찾을 수 없습니다. 상품을 다시 장바구니에 담아주세요.",
@@ -214,10 +233,22 @@ export function CheckoutPage() {
 
       const order = await createOrder({
         cart_id: checkoutCartId,
-        coupon_name: getAppliedCouponName(appliedCoupon, "") || null,
+        coupon_name:
+          appliedCoupon?.coupon?.coupon_name ??
+          appliedCoupon?.coupon_name ??
+          appliedCoupon?.coupon_code ??
+          null,
       });
 
       setCreatedOrder(order);
+      setStoredPendingOrder({
+        order_id: order.order_id,
+        cart_id: order.cart_id,
+        order_status: order.order_status,
+        discount_amount: order.discount_amount,
+        total_amount: order.total_amount,
+        currency: order.currency,
+      });
       setActionMessageType("success");
       setActionMessage("주문이 생성되었습니다. 결제 시뮬레이션을 진행할 수 있습니다.");
     } catch (error) {
@@ -256,11 +287,15 @@ export function CheckoutPage() {
       setPaymentResult(result);
 
       if (result.payment_status === "paid") {
+        if (checkoutCartId) {
+          clearStoredPendingOrder(checkoutCartId);
+        }
+
         clearStoredCartId();
         setActionMessageType("success");
         setActionMessage("결제 성공 시뮬레이션이 완료되었습니다.");
       } else {
-        setActionMessageType("error")
+        setActionMessageType("error");
         setActionMessage("결제 실패 시뮬레이션이 완료되었습니다.");
       }
     } catch {
@@ -402,7 +437,11 @@ export function CheckoutPage() {
 
               {appliedCoupon && (
                 <p className="coupon-applied-text">
-                  적용된 쿠폰: {getAppliedCouponName(appliedCoupon, "확인 불가")}
+                  적용된 쿠폰:{" "} 
+                  {appliedCoupon.coupon?.coupon_name ??
+                    appliedCoupon.coupon?.coupon_name ??
+                    appliedCoupon.coupon?.coupon_name ??
+                    "확인 불가"}                  
                 </p>
               )}
             </section>

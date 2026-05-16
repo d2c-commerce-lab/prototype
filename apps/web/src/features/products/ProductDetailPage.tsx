@@ -4,6 +4,7 @@ import { addCartItem, createCart } from "../../services/cartApi";
 import { getProductDetail } from "../../services/catalogApi";
 import {
   clearStoredCartId,
+  clearStoredPendingOrder,
   getStoredCartId,
   getStoredUser,
   setStoredCartId,
@@ -112,6 +113,7 @@ export function ProductDetailPage() {
           quantity,
         });
       } catch {
+        clearStoredPendingOrder(cartId);
         clearStoredCartId();
 
         const createdCart = await createCart({
@@ -127,6 +129,7 @@ export function ProductDetailPage() {
         });
       }
 
+      clearStoredPendingOrder(cartId);
       setCartMessage("상품을 장바구니에 담았습니다.");
     } catch {
       setCartErrorMessage("상품 수량은 최대 99개까지만 담을 수 있습니다.");

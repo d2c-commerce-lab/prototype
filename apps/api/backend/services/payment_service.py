@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -8,6 +8,12 @@ from sqlalchemy import text
 from backend.db.connection import engine
 from backend.schemas.payment import PaymentSimulationRequest
 
+
+KST = timezone(timedelta(hours=9))
+
+
+def now_kst_naive() -> datetime:
+    return datetime.now(KST).replace(tzinfo=None)
 
 def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
     order_query = text("""
@@ -46,10 +52,10 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
             :pg_provider,
             :transaction_id,
             :failure_code,
-            CURRENT_TIMESTAMP,
+            :now,
             :paid_at,
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
+            :now,
+            :now
         )
         RETURNING
             payment_id,
@@ -70,7 +76,7 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
         UPDATE orders
         SET
             order_status = 'paid',
-            updated_at = CURRENT_TIMESTAMP
+            updated_at = :now
         WHERE order_id = :order_id
     """)
 
@@ -78,7 +84,7 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
         UPDATE orders
         SET
             order_status = 'payment_failed',
-            updated_at = CURRENT_TIMESTAMP
+            updated_at = :now
         WHERE order_id = :order_id
     """)
 
@@ -86,8 +92,8 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
         UPDATE carts
         SET
             cart_status = 'checked_out',
-            checked_out_at = CURRENT_TIMESTAMP,
-            updated_at = CURRENT_TIMESTAMP
+            checked_out_at = :now,
+            updated_at = :now
         WHERE cart_id = :cart_id
         AND cart_status = 'active'
     """)
@@ -112,23 +118,30 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
 
         requested_amount = Decimal(str(order["total_amount"]))
         currency = order["currency"]
+        now = now_kst_naive()
 
         if payload.simulate_result == "success":
             payment_status = "paid"
             paid_amount = requested_amount
             failure_code = None
-            paid_at = datetime.now()
+            paid_at = now
             pg_provider = "mock_pg"
             transaction_id = f"tx-{payload.order_id}"
 
             connection.execute(
                 update_order_success_query,
-                {"order_id": payload.order_id},
+                {
+                    "order_id": payload.order_id,
+                    "now": now,
+                },
             )
 
             connection.execute(
                 update_cart_checked_out_query,
-                {"cart_id": order["cart_id"]},
+                {
+                    "cart_id": order["cart_id"],
+                    "now": now,
+                },
             )
         else:
             payment_status = "failed"
@@ -137,9 +150,13 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
             paid_at = None
             pg_provider = "mock_pg"
             transaction_id = None
+            
             connection.execute(
                 update_order_failed_query,
-                {"order_id": payload.order_id},
+                {
+                    "order_id": payload.order_id,
+                    "now": now,
+                },
             )
 
         created_payment = connection.execute(
@@ -154,6 +171,7 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
                 "transaction_id": transaction_id,
                 "failure_code": failure_code,
                 "paid_at": paid_at,
+                "now": now,
             },
         ).mappings().first()
 
