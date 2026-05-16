@@ -16,9 +16,13 @@ class OrderHistoryItemResponse(BaseModel):
 
 
 class OrderHistorySummaryResponse(BaseModel):
+    order_history_id: str
+    history_event_type: str
+    history_event_at: datetime
     order_id: UUID
     cart_id: UUID | None = None
     order_status: str
+    payment_id: UUID | None = None
     payment_status: str | None = None
     subtotal_amount: Decimal
     discount_amount: Decimal

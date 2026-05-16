@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 from uuid import UUID
@@ -8,6 +9,12 @@ from sqlalchemy import text
 from backend.db.connection import engine
 from backend.schemas.order import OrderCreateRequest
 
+
+KST = timezone(timedelta(hours=9))
+
+
+def now_kst_naive() -> datetime:
+    return datetime.now(KST).replace(tzinfo=None)
 
 def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
     cart_query = text("""
@@ -88,9 +95,9 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
             :discount_amount,
             :total_amount,
             :currency,
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
+            :now,
+            :now,
+            :now
         )
         RETURNING
             order_id,
@@ -126,8 +133,8 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
             :final_item_amount,
             :currency,
             :line_total,
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
+            :now,
+            :now
         )
         RETURNING
             order_item_id,
@@ -244,6 +251,8 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
 
         total_amount = subtotal_amount - discount_amount
 
+        now = now_kst_naive()
+
         created_order = connection.execute(
             insert_order_query,
             {
@@ -254,6 +263,7 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
                 "discount_amount": discount_amount,
                 "total_amount": total_amount,
                 "currency": currency,
+                "now": now
             },
         ).mappings().first()
 
@@ -277,6 +287,7 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
                     "final_item_amount": item["final_item_amount"],
                     "line_total": item["line_total"],
                     "currency": item["currency"],
+                    "now": now
                 },
             ).mappings().first()
 
