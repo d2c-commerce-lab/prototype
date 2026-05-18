@@ -43,7 +43,7 @@ export function MainLayout() {
           {user ? (
             <>
               <Link to="/orders">주문 내역</Link>
-              <span className="app-user">{user.user_name}</span>
+              <span className="app-user">{user.user_name}님</span>
               <button type="button" onClick={handleLogout} className="link-button">
                 로그아웃
               </button>

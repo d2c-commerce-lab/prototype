@@ -1,6 +1,9 @@
+from uuid import UUID
+
 from fastapi import APIRouter, status
 
 from backend.schemas.review import (
+    ProductReviewListResponse,
     ReviewCreateRequest,
     ReviewCreateResponse,
     ReviewDeleteRequest,
@@ -8,7 +11,12 @@ from backend.schemas.review import (
     ReviewUpdateRequest,
     ReviewUpdateResponse,
 )
-from backend.services.review_service import create_review, delete_review, update_review
+from backend.services.review_service import (
+    create_review,
+    delete_review,
+    list_product_reviews,
+    update_review,
+)
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
@@ -43,3 +51,13 @@ def delete_product_review(
 ) -> ReviewDeleteResponse:
     result = delete_review(review_id, payload)
     return ReviewDeleteResponse(**result)
+
+
+@router.get(
+    "/products/{product_id}/reviews",
+    response_model=ProductReviewListResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_product_reviews(product_id: UUID) -> ProductReviewListResponse:
+    result = list_product_reviews(product_id)
+    return ProductReviewListResponse(**result)
