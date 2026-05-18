@@ -454,26 +454,44 @@ export function OrderHistoryPage() {
                               주문 상품 상세가 없습니다.
                             </p>
                           ) : (
-                            orderItems.map((item) => (
-                              <div key={item.order_item_id} className="order-history-item-row">
-                                <div>
-                                  <h3>{item.product_name ?? item.product_id}</h3>
-                                  <p>
-                                    수량 {item.quantity}개 · 단가{" "}
-                                    {formatPrice(item.unit_price, item.currency)}
-                                  </p>
-                                </div>
+                            orderItems.map((item) => {
+                              const canCreateReview =
+                                order.order_status === "paid" && order.payment_status === "paid";
 
-                                <strong>
-                                  {formatPrice(
-                                    item.line_total ??
-                                      item.final_item_amount ??
-                                      Number(item.unit_price) * Number(item.quantity),
-                                    item.currency,
-                                  )}
-                                </strong>
-                              </div>
-                            ))
+                              return (
+                                <div key={item.order_item_id} className="order-history-item-row">
+                                  <div>
+                                    <h3>{item.product_name ?? item.product_id}</h3>
+                                    <p>
+                                      수량 {item.quantity}개 · 단가{" "}
+                                      {formatPrice(item.unit_price, item.currency)}
+                                    </p>
+                                  </div>
+
+                                  <div className="order-history-item-actions">
+                                    <strong>
+                                      {formatPrice(
+                                        item.line_total ??
+                                          item.final_item_amount ??
+                                          Number(item.unit_price) * Number(item.quantity),
+                                        item.currency,
+                                      )}
+                                    </strong>
+
+                                    {canCreateReview && (
+                                      <Link
+                                        to={`/reviews/new?product_id=${item.product_id}&order_item_id=${item.order_item_id}&product_name=${encodeURIComponent(
+                                          item.product_name ?? item.product_id,
+                                        )}`}
+                                        className="secondary-link compact"
+                                      >
+                                        리뷰 작성
+                                      </Link>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
                           )}
                         </div>
                       </article>

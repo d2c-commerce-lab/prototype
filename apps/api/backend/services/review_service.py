@@ -1,4 +1,6 @@
 from typing import Any
+from decimal import Decimal
+from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import text
@@ -338,4 +340,68 @@ def delete_review(review_id: str, payload: ReviewDeleteRequest) -> dict[str, Any
         "review_status": deleted_review["review_status"],
         "updated_at": deleted_review["updated_at"],
         "message": "Review deleted successfully",
+    }
+
+def list_product_reviews(product_id: UUID) -> dict[str, Any]:
+    product_query = text("""
+        SELECT product_id
+        FROM products
+        WHERE product_id = :product_id
+          AND is_active = TRUE
+        LIMIT 1
+    """)
+
+    reviews_query = text("""
+        SELECT
+            r.review_id,
+            r.user_id,
+            r.product_id,
+            r.order_item_id,
+            r.rating,
+            r.review_title,
+            r.review_content,
+            r.review_status,
+            r.created_at,
+            r.updated_at,
+            u.user_name
+        FROM reviews r
+        JOIN users u
+          ON u.user_id = r.user_id
+        WHERE r.product_id = :product_id
+          AND r.review_status = 'visible'
+        ORDER BY r.created_at DESC
+    """)
+
+    with engine.begin() as connection:
+        product = connection.execute(
+            product_query,
+            {"product_id": product_id},
+        ).mappings().first()
+
+        if product is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found",
+            )
+
+        review_rows = connection.execute(
+            reviews_query,
+            {"product_id": product_id},
+        ).mappings().all()
+
+    reviews = [dict(row) for row in review_rows]
+    total_reviews = len(reviews)
+
+    average_rating = None
+    if total_reviews > 0:
+        average_rating = (
+            sum(Decimal(str(review["rating"])) for review in reviews)
+            / Decimal(str(total_reviews))
+        ).quantize(Decimal("0.1"))
+
+    return {
+        "product_id": product_id,
+        "total_reviews": total_reviews,
+        "average_rating": average_rating,
+        "reviews": reviews,
     }
