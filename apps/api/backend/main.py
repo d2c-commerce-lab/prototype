@@ -7,6 +7,7 @@ from backend.api.routes.carts import router as carts_router
 from backend.api.routes.categories import router as categories_router
 from backend.api.routes.checkout import router as checkout_router
 from backend.api.routes.coupon_apply import router as coupon_apply_router
+from backend.api.routes.coupons import router as coupons_router
 from backend.api.routes.health import router as health_router
 from backend.api.routes.order_history import router as order_history_router
 from backend.api.routes.orders import router as orders_router
@@ -39,6 +40,7 @@ app.include_router(carts_router)
 app.include_router(cart_items_router)
 app.include_router(checkout_router)
 app.include_router(coupon_apply_router)
+app.include_router(coupons_router)
 app.include_router(orders_router)
 app.include_router(order_history_router)
 app.include_router(payments_router)
