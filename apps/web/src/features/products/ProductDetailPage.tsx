@@ -37,6 +37,36 @@ function formatReviewerName(userName?: string | null) {
   return normalizedUserName ? `${normalizedUserName}님` : "구매자님";
 }
 
+function parseUtcNaiveDateTime(value: string) {
+  const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(value);
+
+  if (hasTimezone) {
+    return new Date(value);
+  }
+
+  const normalizedValue = value.replace(/\.(\d{3})\d+/, ".$1");
+
+  return new Date(`${normalizedValue}Z`);
+}
+
+function formatReviewDateTime(value?: string | null) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = parseUtcNaiveDateTime(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 function getReviewRecommendationLabel(reviewContent: string) {
   const firstLine = reviewContent.split("\n")[0]?.trim();
 
@@ -369,9 +399,7 @@ export function ProductDetailPage() {
                     <strong>{review.review_title}</strong>
                     <p>
                       {formatReviewerName(review.user_name)} ·{" "}
-                      {new Intl.DateTimeFormat("ko-KR", {
-                        dateStyle: "medium",
-                      }).format(new Date(review.created_at))}
+                      {formatReviewDateTime(review.created_at)}
                     </p>
                   </div>
 

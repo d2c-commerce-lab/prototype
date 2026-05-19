@@ -43,6 +43,7 @@ export function MainLayout() {
           {user ? (
             <>
               <Link to="/orders">주문 내역</Link>
+              <Link to="/coupons">쿠폰함</Link>
               <span className="app-user">{user.user_name}님</span>
               <button type="button" onClick={handleLogout} className="link-button">
                 로그아웃
@@ -79,6 +80,7 @@ export function MainLayout() {
               <Link to="/products">상품 둘러보기</Link>
               <Link to="/cart">장바구니</Link>
               <Link to="/orders">주문 내역</Link>
+              <Link to="/coupons">쿠폰함</Link>
             </div>
 
             <div>

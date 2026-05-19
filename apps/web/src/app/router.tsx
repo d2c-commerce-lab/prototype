@@ -9,6 +9,7 @@ import { CartPage } from "../features/cart/CartPage";
 import { CheckoutPage } from "../features/checkout/CheckoutPage";
 import { OrderHistoryPage } from "../features/orders/OrderHistoryPage";
 import { ReviewCreatePage } from "../features/reviews/ReviewCreatePage";
+import { CouponWalletPage } from "../features/coupons/CouponWalletPage";
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
       {
         path: "orders",
         element: <OrderHistoryPage />
+      },
+      {
+        path: "coupons",
+        element: <CouponWalletPage />
       },
       {
         path: "reviews/new",
