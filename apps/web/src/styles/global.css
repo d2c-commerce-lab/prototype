@@ -38,7 +38,9 @@ textarea {
 
 /* App layout */
 .app-shell {
+  display: flex;
   min-height: 100vh;
+  flex-direction: column;
   background-color: #f8fafc;
 }
 
@@ -81,9 +83,116 @@ textarea {
 }
 
 .app-main {
+  flex: 1;
+  display: flex;
   width: min(1180px, calc(100% - 48px));
   margin: 0 auto;
   padding: 48px 0;
+}
+
+.app-main > * {
+  width: 100%;
+}
+
+/* App footer */
+.app-footer {
+  margin-top: auto;
+  border-top: 1px solid #e5e7eb;
+  background-color: #ffffff;
+}
+
+.app-footer-inner {
+  display: grid;
+  width: min(1180px, calc(100% - 48px));
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 2fr);
+  gap: 48px;
+  margin: 0 auto;
+  padding: 40px 0 28px;
+}
+
+.app-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-footer-brand h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.app-footer-brand p {
+  max-width: 420px;
+  margin: 0;
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.75;
+  word-break: keep-all;
+}
+
+.app-footer-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.app-footer-nav div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.app-footer-nav h3 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.app-footer-nav a,
+.app-footer-nav span {
+  width: fit-content;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app-footer-nav a:hover {
+  color: #111827;
+}
+
+.app-footer-bottom {
+  display: flex;
+  width: min(1180px, calc(100% - 48px));
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 auto;
+  padding: 18px 0 28px;
+  border-top: 1px solid #f3f4f6;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.app-footer-repository-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.app-footer-repository-link:hover {
+  color: #111827;
+}
+
+.app-footer-github-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 /* Shared actions */
@@ -2064,6 +2173,11 @@ textarea {
 }
 
 @media (max-width: 900px) {
+  .app-footer-inner {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
   .product-detail-layout,
   .cart-layout {
     grid-template-columns: 1fr;
@@ -2108,6 +2222,19 @@ textarea {
   .home-grid,
   .product-grid {
     grid-template-columns: 1fr;
+  }
+
+  .app-footer-inner,
+  .app-footer-bottom {
+    width: min(100% - 32px, 1180px);
+  }
+
+  .app-footer-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .app-footer-bottom {
+    flex-direction: column;
   }
 
   .product-list-toolbar {
