@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -51,3 +52,24 @@ class ReviewDeleteResponse(BaseModel):
     review_status: str
     updated_at: datetime
     message: str
+
+
+class ProductReviewItemResponse(BaseModel):
+    review_id: UUID
+    user_id: UUID
+    product_id: UUID
+    order_item_id: UUID
+    rating: int
+    review_title: str
+    review_content: str
+    review_status: str
+    created_at: datetime
+    updated_at: datetime | None = None
+    user_name: str | None = None
+
+
+class ProductReviewListResponse(BaseModel):
+    product_id: UUID
+    total_reviews: int
+    average_rating: Decimal | None = None
+    reviews: list[ProductReviewItemResponse]

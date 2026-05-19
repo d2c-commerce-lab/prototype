@@ -7,6 +7,7 @@ import {
 } from "../../services/cartApi";
 import { 
   clearStoredCartId,
+  clearStoredPendingOrder,
   getStoredCartId, 
   getStoredUser, 
 } from "../../stores/userStore";
@@ -109,6 +110,7 @@ export function CartPage() {
       const cartData = await getCart(storedCartId);
       setCart(cartData);
     } catch {
+      clearStoredPendingOrder(storedCartId);
       clearStoredCartId();
       setCart(null);
       setErrorMessage(null);
@@ -141,6 +143,7 @@ export function CartPage() {
       setErrorMessage(null);
 
       await removeCartItem(storedCartId, cartItemId);
+      clearStoredPendingOrder(storedCartId);
 
       const refreshedCart = await getCart(storedCartId);
       setCart(refreshedCart);
@@ -172,6 +175,8 @@ export function CartPage() {
           normalizedQuantity,
         );
       }
+
+      clearStoredPendingOrder(storedCartId);
 
       const refreshedCart = await getCart(storedCartId);
       setCart(refreshedCart);

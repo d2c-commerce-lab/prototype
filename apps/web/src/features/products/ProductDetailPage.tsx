@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { addCartItem, createCart } from "../../services/cartApi";
 import { getProductDetail } from "../../services/catalogApi";
+import { getProductReviews } from "../../services/reviewApi";
 import {
   clearStoredCartId,
+  clearStoredPendingOrder,
   getStoredCartId,
   getStoredUser,
   setStoredCartId,
 } from "../../stores/userStore";
 import type { ProductDetail } from "../../types/catalog";
+import type { ProductReviewItem, ReviewCreateResponse } from "../../types/review";
+
+type ProductDetailLocationState = {
+  createdReview?: ReviewCreateResponse;
+};
 
 function formatPrice(value: string | number, currency: string) {
   const numericValue = Number(value);
@@ -24,6 +31,33 @@ function formatPrice(value: string | number, currency: string) {
   }).format(numericValue);
 }
 
+function formatReviewerName(userName?: string | null) {
+  const normalizedUserName = userName?.trim();
+
+  return normalizedUserName ? `${normalizedUserName}님` : "구매자님";
+}
+
+function getReviewRecommendationLabel(reviewContent: string) {
+  const firstLine = reviewContent.split("\n")[0]?.trim();
+
+  if (firstLine.startsWith("상품 추천 여부:")) {
+    return firstLine;
+  }
+
+  return "상품 추천 여부: 미기록";
+}
+
+function getReviewDetailContent(reviewContent: string) {
+  const lines = reviewContent.split("\n");
+  const firstLine = lines[0]?.trim();
+
+  if (firstLine.startsWith("상품 추천 여부:")) {
+    return lines.slice(1).join("\n").trim();
+  }
+
+  return reviewContent;
+}
+
 export function ProductDetailPage() {
   const { productId } = useParams();
 
@@ -36,6 +70,19 @@ export function ProductDetailPage() {
   const [cartErrorMessage, setCartErrorMessage] = useState<string | null>(null);
 
   const user = getStoredUser();
+
+  const location = useLocation();
+  const locationState = location.state as ProductDetailLocationState | null;
+
+  const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
+  const [reviewSummary, setReviewSummary] = useState<{
+    totalReviews: number;
+    averageRating: string | number | null;
+  }>({
+    totalReviews: 0,
+    averageRating: null,
+  });
+  const [reviewErrorMessage, setReviewErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProductDetail() {
@@ -60,6 +107,55 @@ export function ProductDetailPage() {
 
     loadProductDetail();
   }, [productId]);
+
+  useEffect(() => {
+    async function loadProductReviews() {
+      if (!productId) {
+        return;
+      }
+
+      try {
+        setReviewErrorMessage(null);
+
+        const reviewData = await getProductReviews(productId);
+
+        setReviews(reviewData.reviews);
+        setReviewSummary({
+          totalReviews: reviewData.total_reviews,
+          averageRating: reviewData.average_rating ?? null,
+        });
+      } catch {
+        setReviewErrorMessage("상품 리뷰를 불러오지 못했습니다.");
+      }
+    }
+
+    loadProductReviews();
+  }, [productId]);
+
+  useEffect(() => {
+    const createdReview = locationState?.createdReview;
+
+    if (!createdReview) {
+      return;
+    }
+
+    setReviews((currentReviews) => {
+      const alreadyExists = currentReviews.some(
+        (review) => review.review_id === createdReview.review_id,
+      );
+
+      if (alreadyExists) {
+        return currentReviews;
+      }
+
+      return [createdReview, ...currentReviews];
+    });
+
+    setReviewSummary((currentSummary) => ({
+      totalReviews: currentSummary.totalReviews + 1,
+      averageRating: currentSummary.averageRating,
+    }));
+  }, [locationState?.createdReview]);
 
   const handleDecreaseQuantity = () => {
     setQuantity((currentQuantity) => Math.max(1, currentQuantity - 1));
@@ -112,6 +208,7 @@ export function ProductDetailPage() {
           quantity,
         });
       } catch {
+        clearStoredPendingOrder(cartId);
         clearStoredCartId();
 
         const createdCart = await createCart({
@@ -127,6 +224,7 @@ export function ProductDetailPage() {
         });
       }
 
+      clearStoredPendingOrder(cartId);
       setCartMessage("상품을 장바구니에 담았습니다.");
     } catch {
       setCartErrorMessage("상품 수량은 최대 99개까지만 담을 수 있습니다.");
@@ -239,6 +337,64 @@ export function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      <section className="product-review-section">
+        <div className="product-review-header">
+          <div>
+            <p className="section-eyebrow">Reviews</p>
+            <h2>상품 리뷰</h2>
+            <p>구매자가 남긴 평점과 상세 후기를 확인해보세요.</p>
+          </div>
+
+          <div className="product-review-summary">
+            <strong>
+              {reviewSummary.averageRating
+                ? Number(reviewSummary.averageRating).toFixed(1)
+                : "-"}
+            </strong>
+            <span>리뷰 {reviewSummary.totalReviews}개</span>
+          </div>
+        </div>
+
+        {reviewErrorMessage ? (
+          <div className="state-box error">{reviewErrorMessage}</div>
+        ) : reviews.length === 0 ? (
+          <div className="state-box">아직 작성된 리뷰가 없습니다.</div>
+        ) : (
+          <div className="product-review-list">
+            {reviews.map((review) => (
+              <article key={review.review_id} className="product-review-card">
+                <div className="product-review-card-header">
+                  <div>
+                    <strong>{review.review_title}</strong>
+                    <p>
+                      {formatReviewerName(review.user_name)} ·{" "}
+                      {new Intl.DateTimeFormat("ko-KR", {
+                        dateStyle: "medium",
+                      }).format(new Date(review.created_at))}
+                    </p>
+                  </div>
+
+                  <div className="product-review-rating">
+                    {"★".repeat(review.rating)}
+                    {"☆".repeat(5 - review.rating)}
+                  </div>
+                </div>
+
+                <p className="product-review-recommendation">
+                  {getReviewRecommendationLabel(review.review_content)}
+                </p>
+
+                {getReviewDetailContent(review.review_content) && (
+                  <p className="product-review-content">
+                    {getReviewDetailContent(review.review_content)}
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </section>
   );
 }

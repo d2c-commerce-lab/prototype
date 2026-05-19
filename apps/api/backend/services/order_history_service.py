@@ -19,28 +19,56 @@ def get_order_history(user_id: UUID) -> dict[str, Any]:
 
     orders_query = text("""
         SELECT
+            CONCAT(o.order_id::text, CHR(58), 'created') AS order_history_id,
+            'order_created' AS history_event_type,
+            o.ordered_at AS history_event_at,
             o.order_id,
             o.user_id,
             o.cart_id,
-            o.order_status,
+            'created' AS order_status,
+            NULL AS payment_id,
+            NULL AS payment_status,
             o.subtotal_amount,
             o.discount_amount,
             o.total_amount,
             o.currency,
             c.coupon_name,
-            o.ordered_at,
-            (
-                SELECT p.payment_status
-                FROM payments p
-                WHERE p.order_id = o.order_id
-                ORDER BY p.created_at DESC
-                LIMIT 1
-            ) AS payment_status
+            o.ordered_at
         FROM orders o
         LEFT JOIN coupons c
-          ON c.coupon_id = o.coupon_id
+        ON c.coupon_id = o.coupon_id
         WHERE o.user_id = :user_id
-        ORDER BY o.ordered_at DESC, o.created_at DESC
+
+        UNION ALL
+
+        SELECT
+            CONCAT(o.order_id::text, CHR(58), 'payment', CHR(58), p.payment_id::text) AS order_history_id,
+            'payment_simulated' AS history_event_type,
+            COALESCE(p.paid_at, p.created_at) AS history_event_at,
+            o.order_id,
+            o.user_id,
+            o.cart_id,
+            CASE
+                WHEN p.payment_status = 'paid' THEN 'paid'
+                WHEN p.payment_status = 'failed' THEN 'payment_failed'
+                ELSE o.order_status
+            END AS order_status,
+            p.payment_id,
+            p.payment_status,
+            o.subtotal_amount,
+            o.discount_amount,
+            o.total_amount,
+            o.currency,
+            c.coupon_name,
+            o.ordered_at
+        FROM orders o
+        JOIN payments p
+        ON p.order_id = o.order_id
+        LEFT JOIN coupons c
+        ON c.coupon_id = o.coupon_id
+        WHERE o.user_id = :user_id
+
+        ORDER BY history_event_at DESC
     """)
 
     order_items_query = text("""
@@ -100,9 +128,13 @@ def get_order_history(user_id: UUID) -> dict[str, Any]:
 
             orders.append(
                 {
+                    "order_history_id": order_row["order_history_id"],
+                    "history_event_type": order_row["history_event_type"],
+                    "history_event_at": order_row["history_event_at"],
                     "order_id": order_row["order_id"],
                     "cart_id": order_row["cart_id"],
                     "order_status": order_row["order_status"],
+                    "payment_id": order_row["payment_id"],
                     "payment_status": order_row["payment_status"],
                     "subtotal_amount": Decimal(str(order_row["subtotal_amount"])),
                     "discount_amount": Decimal(str(order_row["discount_amount"])),
