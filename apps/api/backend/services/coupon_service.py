@@ -155,3 +155,100 @@ def apply_coupon_to_cart(cart_id: UUID, payload: CouponApplyRequest) -> dict[str
         "currency": currency,
         "message": "Coupon applied successfully",
     }
+
+def list_user_coupons(user_id: UUID) -> dict[str, Any]:
+    user_query = text("""
+        SELECT
+            user_id
+        FROM users
+        WHERE user_id = :user_id
+          AND user_status = 'active'
+        LIMIT 1
+    """)
+
+    available_coupons_query = text("""
+        SELECT
+            c.coupon_id,
+            c.campaign_id,
+            c.coupon_name,
+            c.coupon_type,
+            c.discount_value,
+            c.minimum_order_amount,
+            c.coupon_status,
+            c.valid_start_at,
+            c.valid_end_at
+        FROM coupons c
+        WHERE c.coupon_status = 'active'
+          AND c.valid_start_at <= CURRENT_TIMESTAMP
+          AND c.valid_end_at >= CURRENT_TIMESTAMP
+          AND NOT EXISTS (
+              SELECT 1
+              FROM orders o
+              WHERE o.user_id = :user_id
+                AND o.coupon_id = c.coupon_id
+                AND o.order_status = 'paid'
+          )
+        ORDER BY c.valid_end_at ASC, c.coupon_name ASC
+    """)
+
+    used_coupons_query = text("""
+        SELECT
+            c.coupon_id,
+            c.campaign_id,
+            c.coupon_name,
+            c.coupon_type,
+            c.discount_value,
+            c.minimum_order_amount,
+            c.coupon_status,
+            c.valid_start_at,
+            c.valid_end_at,
+            o.order_id AS used_order_id,
+            COALESCE(p.paid_at, p.created_at, o.ordered_at) AS used_at,
+            p.payment_id
+        FROM orders o
+        JOIN coupons c
+          ON c.coupon_id = o.coupon_id
+        LEFT JOIN LATERAL (
+            SELECT
+                payment_id,
+                paid_at,
+                created_at
+            FROM payments
+            WHERE order_id = o.order_id
+              AND payment_status = 'paid'
+            ORDER BY COALESCE(paid_at, created_at) DESC
+            LIMIT 1
+        ) p ON TRUE
+        WHERE o.user_id = :user_id
+          AND o.order_status = 'paid'
+          AND o.coupon_id IS NOT NULL
+        ORDER BY COALESCE(p.paid_at, p.created_at, o.ordered_at) DESC
+    """)
+
+    with engine.connect() as connection:
+        user = connection.execute(
+            user_query,
+            {"user_id": user_id},
+        ).mappings().first()
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        available_coupons = connection.execute(
+            available_coupons_query,
+            {"user_id": user_id},
+        ).mappings().all()
+
+        used_coupons = connection.execute(
+            used_coupons_query,
+            {"user_id": user_id},
+        ).mappings().all()
+
+    return {
+        "user_id": user_id,
+        "available_coupons": [dict(coupon) for coupon in available_coupons],
+        "used_coupons": [dict(coupon) for coupon in used_coupons],
+    }
