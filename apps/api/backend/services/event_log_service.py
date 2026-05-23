@@ -17,6 +17,7 @@ def record_event(
     event_name: str,
     event_type: str,
     source: str,
+    *,
     user_id: UUID | None = None,
     session_id: UUID | None = None,
     entity_type: str | None = None,
