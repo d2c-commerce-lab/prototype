@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { addCartItem, createCart } from "../../services/cartApi";
 import { getProductDetail } from "../../services/catalogApi";
+import { recordUserBehaviorEvent } from "../../services/eventLogApi";
 import { getProductReviews } from "../../services/reviewApi";
 import {
   clearStoredCartId,
@@ -139,6 +140,26 @@ export function ProductDetailPage() {
   }, [productId]);
 
   useEffect(() => {
+    if (!product) {
+      return;
+    }
+
+    void recordUserBehaviorEvent({
+      event_name: "product_detail_viewed",
+      user_id: user?.user_id ?? null,
+      session_id: null,
+      entity_type: "product",
+      entity_id: product.product_id,
+      properties: {
+        page_path: window.location.pathname,
+        product_id: product.product_id,
+        product_name: product.product_name,
+        source_page: "product_detail",
+      },
+    });
+  }, [product?.product_id, user?.user_id]);
+
+  useEffect(() => {
     async function loadProductReviews() {
       if (!productId) {
         return;
@@ -209,6 +230,21 @@ export function ProductDetailPage() {
     if (!productId || !product) {
       return;
     }
+
+    void recordUserBehaviorEvent({
+      event_name: "product_add_to_cart_clicked",
+      user_id: user?.user_id ?? null,
+      session_id: null,
+      entity_type: "product",
+      entity_id: product.product_id,
+      properties: {
+        page_path: window.location.pathname,
+        product_id: product.product_id,
+        product_name: product.product_name,
+        source_page: "product_detail",
+        quantity,
+      },
+    });
 
     if (!user) {
       setCartMessage(null);
