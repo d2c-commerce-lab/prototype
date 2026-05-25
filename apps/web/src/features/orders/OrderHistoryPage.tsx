@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { recordUserBehaviorEvent } from "../../services/eventLogApi";
 import { getOrderHistory } from "../../services/orderApi";
 import { getStoredUser } from "../../stores/userStore";
 import type { OrderHistoryItem, OrderItem } from "../../types/order";
@@ -294,6 +295,19 @@ export function OrderHistoryPage() {
     }
 
     loadOrders();
+  }, [userId]);
+
+  useEffect(() => {
+    void recordUserBehaviorEvent({
+      event_name: "order_history_viewed",
+      user_id: userId,
+      session_id: null,
+      entity_type: null,
+      entity_id: null,
+      properties: {
+        page_path: window.location.pathname,
+      },
+    });
   }, [userId]);
 
   if (!userId) {

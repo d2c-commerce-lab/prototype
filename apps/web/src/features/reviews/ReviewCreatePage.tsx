@@ -1,6 +1,7 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../../services/apiClient";
+import { recordUserBehaviorEvent } from "../../services/eventLogApi";
 import { createReview } from "../../services/reviewApi";
 import { getStoredUser } from "../../stores/userStore";
 
@@ -42,8 +43,42 @@ export function ReviewCreatePage() {
 
   const isInvalidReviewTarget = !validProductId || !validOrderItemId;
 
+  useEffect(() => {
+    void recordUserBehaviorEvent({
+      event_name: "review_create_page_viewed",
+      user_id: userId,
+      session_id: null,
+      entity_type: validProductId ? "product" : null,
+      entity_id: validProductId,
+      properties: {
+        page_path: window.location.pathname,
+        product_id: validProductId,
+        order_item_id: validOrderItemId,
+        product_name: productName,
+      },
+    });
+  }, [userId, validProductId, validOrderItemId, productName]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    void recordUserBehaviorEvent({
+      event_name: "review_submit_clicked",
+      user_id: userId,
+      session_id: null,
+      entity_type: validProductId ? "product" : null,
+      entity_id: validProductId,
+      properties: {
+        page_path: window.location.pathname,
+        product_id: validProductId,
+        order_item_id: validOrderItemId,
+        product_name: productName,
+        rating,
+        recommendation,
+        has_review_title: Boolean(reviewTitle.trim()),
+        has_review_content: Boolean(reviewContent.trim()),
+      },
+    });
 
     setErrorMessage(null);
     setSuccessMessage(null);

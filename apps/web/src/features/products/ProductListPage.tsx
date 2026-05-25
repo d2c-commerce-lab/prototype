@@ -10,6 +10,7 @@ import {
 import { Link } from "react-router-dom";
 import { addCartItem, createCart } from "../../services/cartApi";
 import { getCategories, getProducts } from "../../services/catalogApi";
+import { recordUserBehaviorEvent } from "../../services/eventLogApi";
 import {
   clearStoredCartId,
   clearStoredPendingOrder,
@@ -57,6 +58,21 @@ export function ProductListPage() {
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
 
   const productListTopRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const user = getStoredUser();
+
+    void recordUserBehaviorEvent({
+      event_name: "product_list_viewed",
+      user_id: user?.user_id ?? null,
+      session_id: null,
+      entity_type: null,
+      entity_id: null,
+      properties: {
+        page_path: window.location.pathname,
+      },
+    });
+  }, []);
 
   const scrollToProductListTop = useCallback(() => {
     requestAnimationFrame(() => {
@@ -151,6 +167,21 @@ export function ProductListPage() {
     event.stopPropagation();
 
     const user = getStoredUser();
+
+    void recordUserBehaviorEvent({
+      event_name: "product_add_to_cart_clicked",
+      user_id: user?.user_id ?? null,
+      session_id: null,
+      entity_type: "product",
+      entity_id: product.product_id,
+      properties: {
+        page_path: window.location.pathname,
+        product_id: product.product_id,
+        product_name: product.product_name,
+        source_page: "product_list",
+        quantity: QUICK_ADD_QUANTITY,
+      },
+    });
 
     if (!user) {
       setCartFeedbackMessage(null);

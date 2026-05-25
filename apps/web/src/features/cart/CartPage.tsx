@@ -5,6 +5,7 @@ import {
   removeCartItem,
   updateCartItemQuantity,
 } from "../../services/cartApi";
+import { recordUserBehaviorEvent } from "../../services/eventLogApi";
 import { 
   clearStoredCartId,
   clearStoredPendingOrder,
@@ -124,6 +125,20 @@ export function CartPage() {
   }, [loadCart]);
 
   useEffect(() => {
+    void recordUserBehaviorEvent({
+      event_name: "cart_viewed",
+      user_id: userId,
+      session_id: null,
+      entity_type: storedCartId ? "cart" : null,
+      entity_id: storedCartId,
+      properties: {
+        page_path: window.location.pathname,
+        cart_id: storedCartId,
+      },
+    });
+  }, [storedCartId, userId]);
+
+  useEffect(() => {
     const nextDrafts = cartItems.reduce<Record<string, string>>((drafts, item) => {
       drafts[item.cart_item_id] = String(item.quantity);
       return drafts;
@@ -136,6 +151,24 @@ export function CartPage() {
     if (!storedCartId || removingItemId || updatingItemId) {
       return;
     }
+
+    const targetItem = cartItems.find((item) => item.cart_item_id === cartItemId);
+
+    void recordUserBehaviorEvent({
+      event_name: "cart_item_remove_clicked",
+      user_id: userId,
+      session_id: null,
+      entity_type: "cart",
+      entity_id: storedCartId,
+      properties: {
+        page_path: window.location.pathname,
+        cart_id: storedCartId,
+        cart_item_id: cartItemId,
+        product_id: targetItem?.product_id ?? null,
+        product_name: targetItem?.product_name ?? null,
+        quantity: targetItem?.quantity ?? null,
+      },
+    });
 
     try {
       setRemovingItemId(cartItemId);
@@ -160,6 +193,23 @@ export function CartPage() {
     }
 
     const normalizedQuantity = Math.max(0, Math.min(99, nextQuantity));
+
+    void recordUserBehaviorEvent({
+      event_name: "cart_quantity_change_clicked",
+      user_id: userId,
+      session_id: null,
+      entity_type: "cart",
+      entity_id: storedCartId,
+      properties: {
+        page_path: window.location.pathname,
+        cart_id: storedCartId,
+        cart_item_id: item.cart_item_id,
+        product_id: item.product_id,
+        product_name: item.product_name ?? null,
+        previous_quantity: item.quantity,
+        next_quantity: normalizedQuantity,
+      },
+    });
 
     try {
       setUpdatingItemId(item.cart_item_id);
