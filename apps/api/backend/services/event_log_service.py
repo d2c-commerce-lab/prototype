@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -11,6 +12,7 @@ from backend.schemas.event_log import EventLogCreateRequest
 
 ALLOWED_EVENT_TYPES = {"user_behavior", "domain_event", "system_event"}
 ALLOWED_SOURCES = {"frontend", "backend", "script"}
+logger = logging.getLogger(__name__)
 
 
 def record_event(
@@ -106,6 +108,29 @@ def record_event(
         **dict(event),
         "message": "Event log recorded successfully",
     }
+
+
+def record_domain_event_safely(
+    *,
+    event_name: str,
+    user_id: UUID | None,
+    entity_type: str | None,
+    entity_id: UUID | None,
+    properties: dict[str, Any],
+) -> None:
+    try:
+        record_event(
+            event_name=event_name,
+            event_type="domain_event",
+            source="backend",
+            user_id=user_id,
+            session_id=None,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            properties=properties,
+        )
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.exception("Failed to record domain event: %s", event_name)
 
 
 def create_event_log(payload: EventLogCreateRequest) -> dict[str, Any]:
