@@ -6,6 +6,7 @@ import {
   enterCheckout,
   simulatePayment,
 } from "../../services/checkoutApi";
+import { recordUserBehaviorEvent } from "../../services/eventLogApi";
 import {
   clearStoredCartId,
   clearStoredPendingOrder,
@@ -169,6 +170,20 @@ export function CheckoutPage() {
     loadCheckout();
   }, [checkoutCartId, userId]);
 
+  useEffect(() => {
+    void recordUserBehaviorEvent({
+      event_name: "checkout_started",
+      user_id: userId,
+      session_id: null,
+      entity_type: checkoutCartId ? "cart" : null,
+      entity_id: checkoutCartId,
+      properties: {
+        page_path: window.location.pathname,
+        cart_id: checkoutCartId,
+      },
+    });
+  }, [checkoutCartId, userId]);
+
   const handleCouponCodeChange = (event: ChangeEvent<HTMLInputElement>) => {
     setCouponCode(event.target.value);
   };
@@ -225,6 +240,24 @@ export function CheckoutPage() {
       return;
     }
 
+    void recordUserBehaviorEvent({
+      event_name: "order_create_clicked",
+      user_id: userId,
+      session_id: null,
+      entity_type: "cart",
+      entity_id: checkoutCartId,
+      properties: {
+        page_path: window.location.pathname,
+        cart_id: checkoutCartId,
+        coupon_name:
+          appliedCoupon?.coupon?.coupon_name ??
+          appliedCoupon?.coupon_name ??
+          appliedCoupon?.coupon_code ??
+          null,
+        final_amount: finalAmount,
+      },
+    });
+
     try {
       setIsCreatingOrder(true);
       setErrorMessage(null);
@@ -272,6 +305,24 @@ export function CheckoutPage() {
       setErrorMessage("먼저 주문을 생성해주세요.");
       return;
     }
+
+    void recordUserBehaviorEvent({
+      event_name:
+        simulateResult === "success"
+          ? "payment_success_clicked"
+          : "payment_fail_clicked",
+      user_id: userId,
+      session_id: null,
+      entity_type: "order",
+      entity_id: createdOrder.order_id,
+      properties: {
+        page_path: window.location.pathname,
+        cart_id: checkoutCartId,
+        order_id: createdOrder.order_id,
+        payment_method: PAYMENT_METHOD,
+        simulate_result: simulateResult,
+      },
+    });
 
     try {
       setIsPaying(true);

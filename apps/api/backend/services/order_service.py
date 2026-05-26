@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
@@ -8,10 +9,35 @@ from sqlalchemy import text
 
 from backend.db.connection import engine
 from backend.schemas.order import OrderCreateRequest
+from backend.services.event_log_service import record_event
 
 
 KST = timezone(timedelta(hours=9))
 
+logger = logging.getLogger(__name__)
+
+
+def record_domain_event_safely(
+    *,
+    event_name: str,
+    user_id: UUID | None,
+    entity_type: str | None,
+    entity_id: UUID | None,
+    properties: dict[str, Any],
+) -> None:
+    try:
+        record_event(
+            event_name=event_name,
+            event_type="domain_event",
+            source="backend",
+            user_id=user_id,
+            session_id=None,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            properties=properties,
+        )
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.exception("Failed to record domain event: %s", event_name)
 
 def now_kst_naive() -> datetime:
     return datetime.now(KST).replace(tzinfo=None)
@@ -308,6 +334,25 @@ def create_order_from_cart(payload: OrderCreateRequest) -> dict[str, Any]:
                     "currency": created_order_item["currency"],
                 }
             )
+
+    record_domain_event_safely(
+        event_name="order_created",
+        user_id=created_order["user_id"],
+        entity_type="order",
+        entity_id=created_order["order_id"],
+        properties={
+            "order_id": created_order["order_id"],
+            "cart_id": created_order["cart_id"],
+            "order_status": created_order["order_status"],
+            "subtotal_amount": created_order["subtotal_amount"],
+            "discount_amount": created_order["discount_amount"],
+            "total_amount": created_order["total_amount"],
+            "currency": created_order["currency"],
+            "coupon_id": coupon_id,
+            "coupon_name": coupon_name,
+            "item_count": len(created_items),
+        },
+    )
 
     return {
         "order_id": created_order["order_id"],

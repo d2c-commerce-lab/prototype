@@ -253,6 +253,24 @@ CREATE TABLE reviews (
 );
 
 -- =========================================
+-- 13. event_logs
+-- =========================================
+CREATE TABLE IF NOT EXISTS event_logs (
+    event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_name VARCHAR(100) NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    user_id UUID NULL,
+    session_id UUID NULL,
+    entity_type VARCHAR(50) NULL,
+    entity_id UUID NULL,
+    occurred_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    source VARCHAR(50) NOT NULL,
+    properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================
 -- Recommended indexes
 -- =========================================
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
@@ -263,9 +281,21 @@ CREATE INDEX idx_cart_items_cart_id ON cart_items(cart_id);
 CREATE INDEX idx_cart_items_product_id ON cart_items(product_id);
 CREATE INDEX idx_orders_user_id ON orders(user_id);
 CREATE INDEX idx_orders_cart_id ON orders(cart_id);
-CREATE INDEX idx_orders_coupon_id ON orders(applied_coupon_id);
+CREATE INDEX idx_orders_coupon_id ON orders(coupon_id);
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_order_items_product_id ON order_items(product_id);
 CREATE INDEX idx_payments_order_id ON payments(order_id);
 CREATE INDEX idx_reviews_user_id ON reviews(user_id);
 CREATE INDEX idx_reviews_product_id ON reviews(product_id);
+
+CREATE INDEX IF NOT EXISTS idx_event_logs_event_name ON event_logs (event_name);
+
+CREATE INDEX IF NOT EXISTS idx_event_logs_event_type ON event_logs (event_type);
+
+CREATE INDEX IF NOT EXISTS idx_event_logs_user_id ON event_logs (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_event_logs_session_id ON event_logs (session_id);
+
+CREATE INDEX IF NOT EXISTS idx_event_logs_entity ON event_logs (entity_type, entity_id);
+
+CREATE INDEX IF NOT EXISTS idx_event_logs_occurred_at ON event_logs (occurred_at);

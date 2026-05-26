@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getUserCoupons } from "../../services/couponApi";
+import { recordUserBehaviorEvent } from "../../services/eventLogApi";
 import { getStoredUser } from "../../stores/userStore";
 import type { UsedCoupon, UserCoupon, UserCouponWalletResponse } from "../../types/coupon";
 
@@ -154,6 +155,19 @@ export function CouponWalletPage() {
     }
 
     loadCoupons();
+  }, [userId]);
+
+  useEffect(() => {
+    void recordUserBehaviorEvent({
+      event_name: "coupon_wallet_viewed",
+      user_id: userId,
+      session_id: null,
+      entity_type: null,
+      entity_id: null,
+      properties: {
+        page_path: window.location.pathname,
+      },
+    });
   }, [userId]);
 
   if (!userId) {

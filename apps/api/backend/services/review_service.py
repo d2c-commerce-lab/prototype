@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 from decimal import Decimal
 from uuid import UUID
@@ -11,7 +12,33 @@ from backend.schemas.review import (
     ReviewDeleteRequest,
     ReviewUpdateRequest,
 )
+from backend.services.event_log_service import record_event
 
+
+logger = logging.getLogger(__name__)
+
+
+def record_domain_event_safely(
+    *,
+    event_name: str,
+    user_id: UUID | None,
+    entity_type: str | None,
+    entity_id: UUID | None,
+    properties: dict[str, Any],
+) -> None:
+    try:
+        record_event(
+            event_name=event_name,
+            event_type="domain_event",
+            source="backend",
+            user_id=user_id,
+            session_id=None,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            properties=properties,
+        )
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.exception("Failed to record domain event: %s", event_name)
 
 def create_review(payload: ReviewCreateRequest) -> dict[str, Any]:
     user_query = text("""
@@ -157,6 +184,22 @@ def create_review(payload: ReviewCreateRequest) -> dict[str, Any]:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create review",
             )
+
+    record_domain_event_safely(
+        event_name="review_created",
+        user_id=created_review["user_id"],
+        entity_type="review",
+        entity_id=created_review["review_id"],
+        properties={
+            "review_id": created_review["review_id"],
+            "product_id": created_review["product_id"],
+            "order_item_id": created_review["order_item_id"],
+            "rating": created_review["rating"],
+            "review_status": created_review["review_status"],
+            "has_review_title": bool(created_review["review_title"]),
+            "has_review_content": bool(created_review["review_content"]),
+        },
+    )
 
     return {
         "review_id": created_review["review_id"],
