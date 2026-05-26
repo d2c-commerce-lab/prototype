@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 from uuid import UUID
@@ -7,7 +8,33 @@ from sqlalchemy import text
 
 from backend.db.connection import engine
 from backend.schemas.coupon_apply import CouponApplyRequest
+from backend.services.event_log_service import record_event
 
+
+logger = logging.getLogger(__name__)
+
+
+def record_domain_event_safely(
+    *,
+    event_name: str,
+    user_id: UUID | None,
+    entity_type: str | None,
+    entity_id: UUID | None,
+    properties: dict[str, Any],
+) -> None:
+    try:
+        record_event(
+            event_name=event_name,
+            event_type="domain_event",
+            source="backend",
+            user_id=user_id,
+            session_id=None,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            properties=properties,
+        )
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.exception("Failed to record domain event: %s", event_name)
 
 def apply_coupon_to_cart(cart_id: UUID, payload: CouponApplyRequest) -> dict[str, Any]:
     cart_query = text("""
@@ -135,6 +162,25 @@ def apply_coupon_to_cart(cart_id: UUID, payload: CouponApplyRequest) -> dict[str
         discount_amount = total_amount
 
     final_amount = total_amount - discount_amount
+
+    record_domain_event_safely(
+        event_name="coupon_applied",
+        user_id=cart["user_id"],
+        entity_type="coupon",
+        entity_id=coupon["coupon_id"],
+        properties={
+            "cart_id": cart_id,
+            "coupon_id": coupon["coupon_id"],
+            "coupon_name": coupon["coupon_name"],
+            "coupon_type": coupon["coupon_type"],
+            "discount_value": discount_value,
+            "minimum_order_amount": minimum_order_amount,
+            "total_amount": total_amount,
+            "discount_amount": discount_amount,
+            "final_amount": final_amount,
+            "currency": currency,
+        },
+    )
 
     return {
         "cart_id": cart_id,

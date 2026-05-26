@@ -9,6 +9,8 @@ from backend.schemas.cart_item import (
     CartItemCreateRequest, 
     CartItemQuantityUpdateRequest,
 )
+from backend.services.event_log_service import record_domain_event_safely
+
 
 MAX_CART_ITEM_QUANTITY = 99
 
@@ -16,6 +18,7 @@ def add_item_to_cart(cart_id: UUID, payload: CartItemCreateRequest) -> dict[str,
     cart_query = text("""
         SELECT
             cart_id,
+            user_id,
             cart_status
         FROM carts
         WHERE cart_id = :cart_id
@@ -157,6 +160,24 @@ def add_item_to_cart(cart_id: UUID, payload: CartItemCreateRequest) -> dict[str,
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to update cart item",
                 )
+            
+            record_domain_event_safely(
+                event_name="cart_item_quantity_changed",
+                user_id=cart["user_id"],
+                entity_type="cart",
+                entity_id=updated_item["cart_id"],
+                properties={
+                    "cart_id": updated_item["cart_id"],
+                    "cart_item_id": updated_item["cart_item_id"],
+                    "product_id": updated_item["product_id"],
+                    "previous_quantity": existing_item["quantity"],
+                    "next_quantity": updated_item["quantity"],
+                    "quantity_delta": payload.quantity,
+                    "unit_price": updated_item["unit_price"],
+                    "currency": updated_item["currency"],
+                    "change_source": "add_item_to_cart",
+                },
+            )
 
             return {
                 "cart_item_id": updated_item["cart_item_id"],
@@ -185,6 +206,21 @@ def add_item_to_cart(cart_id: UUID, payload: CartItemCreateRequest) -> dict[str,
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to add item to cart",
             )
+        
+        record_domain_event_safely(
+            event_name="cart_item_added",
+            user_id=cart["user_id"],
+            entity_type="cart",
+            entity_id=created_item["cart_id"],
+            properties={
+                "cart_id": created_item["cart_id"],
+                "cart_item_id": created_item["cart_item_id"],
+                "product_id": created_item["product_id"],
+                "quantity": created_item["quantity"],
+                "unit_price": created_item["unit_price"],
+                "currency": created_item["currency"],
+            },
+        )
 
         return {
             "cart_item_id": created_item["cart_item_id"],
@@ -201,7 +237,8 @@ def add_item_to_cart(cart_id: UUID, payload: CartItemCreateRequest) -> dict[str,
 def remove_item_from_cart(cart_id: UUID, cart_item_id: UUID) -> dict[str, Any]:
     cart_query = text("""
         SELECT
-            cart_id
+            cart_id,
+            user_id
         FROM carts
         WHERE cart_id = :cart_id
           AND cart_status = 'active'
@@ -214,7 +251,11 @@ def remove_item_from_cart(cart_id: UUID, cart_item_id: UUID) -> dict[str, Any]:
           AND cart_id = :cart_id
         RETURNING
             cart_item_id,
-            cart_id
+            cart_id,
+            product_id,
+            quantity,
+            unit_price,
+            currency
     """)
 
     with engine.begin() as connection:
@@ -242,6 +283,21 @@ def remove_item_from_cart(cart_id: UUID, cart_item_id: UUID) -> dict[str, Any]:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Cart item not found",
             )
+        
+        record_domain_event_safely(
+            event_name="cart_item_removed",
+            user_id=cart["user_id"],
+            entity_type="cart",
+            entity_id=deleted_item["cart_id"],
+            properties={
+                "cart_id": deleted_item["cart_id"],
+                "cart_item_id": deleted_item["cart_item_id"],
+                "product_id": deleted_item["product_id"],
+                "quantity": deleted_item["quantity"],
+                "unit_price": deleted_item["unit_price"],
+                "currency": deleted_item["currency"],
+            },
+        )
 
         return {
             "cart_item_id": deleted_item["cart_item_id"],
@@ -257,6 +313,7 @@ def update_cart_item_quantity(
     cart_query = text("""
         SELECT
             cart_id,
+            user_id,
             cart_status
         FROM carts
         WHERE cart_id = :cart_id
@@ -269,6 +326,7 @@ def update_cart_item_quantity(
             cart_item_id,
             cart_id,
             product_id,
+            quantity,
             unit_price,
             currency
         FROM cart_items
@@ -335,6 +393,23 @@ def update_cart_item_quantity(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to update cart item quantity",
             )
+        
+    record_domain_event_safely(
+        event_name="cart_item_quantity_changed",
+        user_id=cart["user_id"],
+        entity_type="cart",
+        entity_id=updated_item["cart_id"],
+        properties={
+            "cart_id": updated_item["cart_id"],
+            "cart_item_id": updated_item["cart_item_id"],
+            "product_id": updated_item["product_id"],
+            "previous_quantity": item["quantity"],
+            "next_quantity": updated_item["quantity"],
+            "unit_price": updated_item["unit_price"],
+            "currency": updated_item["currency"],
+            "change_source": "update_cart_item_quantity",
+        },
+    )
 
     return {
         "cart_item_id": updated_item["cart_item_id"],

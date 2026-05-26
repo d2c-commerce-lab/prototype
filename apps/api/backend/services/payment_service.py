@@ -1,16 +1,43 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import text
 
 from backend.db.connection import engine
 from backend.schemas.payment import PaymentSimulationRequest
+from backend.services.event_log_service import record_event
 
 
 KST = timezone(timedelta(hours=9))
 
+logger = logging.getLogger(__name__)
+
+
+def record_domain_event_safely(
+    *,
+    event_name: str,
+    user_id: UUID | None,
+    entity_type: str | None,
+    entity_id: UUID | None,
+    properties: dict[str, Any],
+) -> None:
+    try:
+        record_event(
+            event_name=event_name,
+            event_type="domain_event",
+            source="backend",
+            user_id=user_id,
+            session_id=None,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            properties=properties,
+        )
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.exception("Failed to record domain event: %s", event_name)
 
 def now_kst_naive() -> datetime:
     return datetime.now(KST).replace(tzinfo=None)
@@ -19,7 +46,9 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
     order_query = text("""
         SELECT
             order_id,
+            user_id,
             cart_id,
+            coupon_id,
             order_status,
             total_amount,
             currency
@@ -180,6 +209,71 @@ def simulate_payment(payload: PaymentSimulationRequest) -> dict[str, Any]:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create payment",
             )
+
+    if created_payment["payment_status"] == "paid":
+        record_domain_event_safely(
+            event_name="payment_succeeded",
+            user_id=order["user_id"],
+            entity_type="payment",
+            entity_id=created_payment["payment_id"],
+            properties={
+                "payment_id": created_payment["payment_id"],
+                "order_id": created_payment["order_id"],
+                "cart_id": order["cart_id"],
+                "payment_method": created_payment["payment_method"],
+                "payment_status": created_payment["payment_status"],
+                "requested_amount": requested_amount,
+                "approved_amount": created_payment["paid_amount"],
+                "currency": created_payment["currency"],
+                "pg_provider": created_payment["pg_provider"],
+                "transaction_id": created_payment["transaction_id"],
+            },
+        )
+
+        record_domain_event_safely(
+            event_name="cart_checked_out",
+            user_id=order["user_id"],
+            entity_type="cart",
+            entity_id=order["cart_id"],
+            properties={
+                "cart_id": order["cart_id"],
+                "order_id": created_payment["order_id"],
+                "payment_id": created_payment["payment_id"],
+                "cart_status": "checked_out",
+            },
+        )
+
+        if order["coupon_id"] is not None:
+            record_domain_event_safely(
+                event_name="coupon_used",
+                user_id=order["user_id"],
+                entity_type="coupon",
+                entity_id=order["coupon_id"],
+                properties={
+                    "coupon_id": order["coupon_id"],
+                    "order_id": created_payment["order_id"],
+                    "payment_id": created_payment["payment_id"],
+                    "cart_id": order["cart_id"],
+                },
+            )
+    else:
+        record_domain_event_safely(
+            event_name="payment_failed",
+            user_id=order["user_id"],
+            entity_type="payment",
+            entity_id=created_payment["payment_id"],
+            properties={
+                "payment_id": created_payment["payment_id"],
+                "order_id": created_payment["order_id"],
+                "cart_id": order["cart_id"],
+                "payment_method": created_payment["payment_method"],
+                "payment_status": created_payment["payment_status"],
+                "requested_amount": requested_amount,
+                "approved_amount": created_payment["paid_amount"],
+                "currency": created_payment["currency"],
+                "failure_code": created_payment["failure_code"],
+            },
+        )
 
     return {
         "payment_id": created_payment["payment_id"],

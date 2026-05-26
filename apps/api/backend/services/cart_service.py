@@ -7,6 +7,7 @@ from sqlalchemy import text
 
 from backend.db.connection import engine
 from backend.schemas.cart import CartCreateRequest
+from backend.services.event_log_service import record_domain_event_safely
 
 
 def create_or_get_active_cart(payload: CartCreateRequest) -> dict[str, Any]:
@@ -49,6 +50,8 @@ def create_or_get_active_cart(payload: CartCreateRequest) -> dict[str, Any]:
             checked_out_at
     """)
 
+    is_created = False
+
     with engine.begin() as connection:
         existing = connection.execute(
             select_query,
@@ -56,35 +59,43 @@ def create_or_get_active_cart(payload: CartCreateRequest) -> dict[str, Any]:
         ).mappings().first()
 
         if existing is not None:
-            return {
-                "cart_id": existing["cart_id"],
-                "user_id": existing["user_id"],
-                "cart_status": existing["cart_status"],
-                "created_at": existing["created_at"],
-                "updated_at": existing["updated_at"],
-                "checked_out_at": existing["checked_out_at"],
-            }
+            cart = existing
+        else:
+            created = connection.execute(
+                insert_query,
+                {"user_id": payload.user_id},
+            ).mappings().first()
 
-        created = connection.execute(
-            insert_query,
-            {"user_id": payload.user_id},
-        ).mappings().first()
+            if created is None:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create cart",
+                )
 
-        if created is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create cart",
-            )
+            cart = created
+            is_created = True
 
-        return {
-            "cart_id": created["cart_id"],
-            "user_id": created["user_id"],
-            "cart_status": created["cart_status"],
-            "created_at": created["created_at"],
-            "updated_at": created["updated_at"],
-            "checked_out_at": created["checked_out_at"],
-        }
+    if is_created:
+        record_domain_event_safely(
+            event_name="cart_created",
+            user_id=cart["user_id"],
+            entity_type="cart",
+            entity_id=cart["cart_id"],
+            properties={
+                "cart_id": cart["cart_id"],
+                "cart_status": cart["cart_status"],
+                "created_at": cart["created_at"],
+            },
+        )
 
+    return {
+        "cart_id": cart["cart_id"],
+        "user_id": cart["user_id"],
+        "cart_status": cart["cart_status"],
+        "created_at": cart["created_at"],
+        "updated_at": cart["updated_at"],
+        "checked_out_at": cart["checked_out_at"],
+    }
 
 def get_cart_detail(cart_id: UUID) -> dict[str, Any]:
     cart_query = text("""
